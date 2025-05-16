@@ -14,3 +14,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://b3f-clothing.pages.dev/sitemap.xml
+
