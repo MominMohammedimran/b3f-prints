@@ -1,14 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-
-export interface AdminUser {
-  id: string;
-  user_id: string;
-  email: string;
-  role: string;
-  permissions: string[];
-  created_at: string;
-}
+import { AdminUser } from "@/lib/types";
 
 export const DEFAULT_ADMIN_PERMISSIONS = [
   "products.create",
@@ -25,17 +17,6 @@ export const DEFAULT_ADMIN_PERMISSIONS = [
   "customers.delete",
 ];
 
-// Define AdminDbResponse interface to avoid infinite type instantiation
-interface AdminDbResponse {
-  id: string;
-  user_id?: string;
-  email: string;
-  role?: string;
-  permissions?: string[];
-  created_at: string;
-  updated_at?: string;
-}
-
 export const isAdminSessionValid = async (): Promise<boolean> => {
   const adminUser = await validateAdminSession();
   return !!adminUser;
@@ -44,6 +25,17 @@ export const isAdminSessionValid = async (): Promise<boolean> => {
 export const getAdminSession = async (): Promise<AdminUser | null> => {
   return await validateAdminSession();
 };
+
+// Define a concrete type for admin data from database to avoid recursive type inference
+interface AdminRecord {
+  id: string;
+  email: string;
+  role?: string;
+  created_at: string;
+  updated_at?: string;
+  user_id?: string;
+  permissions?: string[];
+}
 
 export const validateAdminSession = async (): Promise<AdminUser | null> => {
   try {
@@ -57,7 +49,7 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
     
     const email = session.user.email;
     
-    // Query the admin_users table instead of admins
+    // Query the admin_users table
     const { data, error } = await supabase
       .from('admin_users')
       .select('*')
@@ -69,17 +61,18 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
       return null;
     }
 
-    // Type assertion to ensure we have the right fields
-    const adminData = data as AdminDbResponse;
+    // Cast data to AdminRecord type to ensure type safety
+    const adminRecord = data as AdminRecord;
 
     // Create a safe admin user object with fallbacks
     const adminUser: AdminUser = {
-      id: adminData.id || '',
-      user_id: adminData.user_id || adminData.id || '',
-      email: adminData.email || email || '',
-      role: adminData.role || 'admin',
-      permissions: Array.isArray(adminData.permissions) ? adminData.permissions : DEFAULT_ADMIN_PERMISSIONS,
-      created_at: adminData.created_at || new Date().toISOString()
+      id: adminRecord.id || '',
+      email: adminRecord.email || email || '',
+      role: adminRecord.role || 'admin',
+      created_at: adminRecord.created_at || new Date().toISOString(),
+      updated_at: adminRecord.updated_at || undefined,
+      user_id: adminRecord.user_id || session.user.id || '',
+      permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
     };
 
     return adminUser;

@@ -117,7 +117,7 @@ const ProductCard = ({
         )}
         
         {isCustomProduct && (
-          <div className="absolute left-0 top-1/2 sm:top-12 md:top-12 -translate-y-1/2 z-10 bg-blue-500 px-1 py-1 text-[10px] sm:text-[15px] md:text-sm font-semibold text-white flex items-center">
+          <div className="absolute left-0 top-3 sm:top-12 md:top- -translate-y-1/2 z-10 bg-blue-500 px-1 py-1 text-[10px] sm:text-[15px] md:text-sm font-semibold text-white flex items-center">
             <Pencil size={10} className="mr-1" /> Customizable
           </div>
         )}

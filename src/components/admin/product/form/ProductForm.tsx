@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/lib/types';
 import ProductBasicInfo from './ProductBasicInfo';
 import ProductInventoryInfo from './ProductInventoryInfo';
 import ProductDescription from './ProductDescription';
 import ProductVariants from './ProductVariants';
+import ProductImages from './ProductImages';
 
 interface ProductFormProps {
   product: Product;
@@ -13,9 +14,30 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+// Extended Product interface for file uploads
+interface ProductWithFiles extends Product {
+  mainImageFile?: File;
+  additionalImageFiles?: File[];
+}
+
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<Product>({...product});
+  const [formData, setFormData] = useState<ProductWithFiles>({...product});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
+  
+  useEffect(() => {
+    // Initialize product data when component mounts or product changes
+    setFormData({
+      ...product,
+      originalPrice: product.originalPrice || product.price,
+      discountPercentage: product.discountPercentage || 0,
+      stock: product.stock || 0,
+      sizes: product.sizes || [],
+      tags: product.tags || [],
+      images: product.images || [],
+    });
+  }, [product]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -67,6 +89,48 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     }));
   };
   
+  const handleMainImageChange = (file: File) => {
+    setMainImageFile(file);
+    // Create a temporary URL for preview
+    const imageUrl = URL.createObjectURL(file);
+    setFormData(prev => ({
+      ...prev,
+      image: imageUrl,
+      mainImageFile: file // Add the file to formData
+    }));
+  };
+  
+  const handleAdditionalImagesChange = (files: File[]) => {
+    setAdditionalImageFiles(prev => [...prev, ...files]);
+    
+    // Update the form data with the additional image files
+    setFormData(prev => ({
+      ...prev,
+      additionalImageFiles: [...(prev.additionalImageFiles || []), ...files]
+    }));
+  };
+  
+  const handleRemoveAdditionalImage = (index: number) => {
+    // Remove from the additionalImageFiles array
+    setAdditionalImageFiles(prev => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+    
+    // Also remove from the images array in formData
+    setFormData(prev => {
+      const updatedImages = [...(prev.images || [])];
+      updatedImages.splice(index, 1);
+      
+      return {
+        ...prev,
+        images: updatedImages,
+        additionalImageFiles: prev.additionalImageFiles?.filter((_, i) => i !== index)
+      };
+    });
+  };
+  
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -74,7 +138,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       newErrors.name = "Name is required";
     }
     
-    if (!formData.code.trim()) {
+    if (!formData.code?.trim()) {
       newErrors.code = "Product code is required";
     }
     
@@ -94,6 +158,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     e.preventDefault();
     
     if (validate()) {
+      // We can safely pass formData as it now includes mainImageFile property
       onSave(formData);
     }
   };
@@ -102,19 +167,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information Section */}
       <ProductBasicInfo 
-        name={formData.name}
-        code={formData.code}
-        category={formData.category}
-        price={formData.price}
+        name={formData.name || ''}
+        code={formData.code || ''}
+        category={formData.category || ''}
+        price={formData.price || 0}
         errors={errors}
         onChange={handleChange}
         onCategoryChange={handleCategoryChange}
       />
       
+      {/* Product Images Section */}
+      <ProductImages
+        mainImage={formData.image || ''}
+        additionalImages={formData.images || []}
+        onMainImageChange={handleMainImageChange}
+        onAdditionalImagesChange={handleAdditionalImagesChange}
+        onRemoveAdditionalImage={handleRemoveAdditionalImage}
+      />
+      
       {/* Inventory & Pricing Section */}
       <ProductInventoryInfo 
-        originalPrice={formData.originalPrice}
-        discountPercentage={formData.discountPercentage}
+        originalPrice={formData.originalPrice || formData.price || 0}
+        discountPercentage={formData.discountPercentage || 0}
         stock={formData.stock || 0}
         onChange={handleChange}
       />
@@ -129,7 +203,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       
       {/* Description Section */}
       <ProductDescription 
-        description={formData.description}
+        description={formData.description || ''}
         onChange={handleChange}
       />
       

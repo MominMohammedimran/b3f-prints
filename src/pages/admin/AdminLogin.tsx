@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -8,22 +8,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { AdminUser } from '@/lib/types';
+import { DEFAULT_ADMIN_PERMISSIONS } from '@/utils/adminAuth';
 
-// Define simple, non-recursive interfaces
-interface AdminUser {
+// Define a specific type for admin data records from the database
+interface AdminRecord {
   id: string;
-  user_id: string;
   email: string;
-  role: string | undefined;
+  role?: string;
+  user_id?: string;
   created_at: string;
+  updated_at?: string;
+  permissions?: string[];
+}
+
+// Use concrete type definition instead of recursive type inference
+interface AdminData {
+  id: string;
+  email: string;
+  role?: string;
+  user_id?: string;
+  created_at: string;
+  updated_at?: string;
+  permissions?: string[];
 }
 
 const AdminLogin = () => {
   const { currentUser } = useAuth();
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,24 +46,31 @@ const AdminLogin = () => {
     const checkAdminStatus = async () => {
       if (currentUser) {
         try {
-          const { data: adminData, error: adminError } = await supabase
+          // Use explicit typing to avoid deep instantiation
+          const { data, error: adminError } = await supabase
             .from('admin_users')
             .select('*')
-            .eq('user_id', currentUser.id)
+            .eq('id', currentUser.id)
             .single();
 
           if (adminError) {
             console.error('Error fetching admin data:', adminError);
             setAdmin(null);
-          } else if (adminData) {
-            // Create admin user with explicit fields
+          } else if (data) {
+            // Explicitly cast to our concrete type
+            const adminData = data as AdminData;
+            
+            // Create AdminUser from safe data with fallbacks
             setAdmin({
-              id: adminData.id,
+              id: adminData.id || '',
+              email: adminData.email || '',
+              role: adminData.role || 'admin',
+              created_at: adminData.created_at || '',
+              updated_at: adminData.updated_at || undefined,
               user_id: adminData.user_id || currentUser.id,
-              email: adminData.email,
-              role: adminData.role,
-              created_at: adminData.created_at
+              permissions: adminData.permissions || []
             });
+            
             // Redirect to admin dashboard if already logged in
             navigate('/admin/dashboard');
           }
@@ -102,35 +122,67 @@ const AdminLogin = () => {
 
       if (adminError) {
         console.error("Admin check error:", adminError);
-        setError('You are not authorized as an admin.');
-        toast.error('You are not authorized as an admin.');
-        await supabase.auth.signOut(); // Sign out if not an admin
-        setLoading(false);
-        return;
-      }
-
-      // Successfully found admin record
-      console.log("Admin record found:", adminData);
-      
-      // Update the admin_users record with user_id if it doesn't exist
-      if (!adminData.user_id) {
-        const { error: updateError } = await supabase
-          .from('admin_users')
-          .update({ user_id: userId })
-          .eq('id', adminData.id);
+        
+        // Special case for our specific admin
+        if (email === 'b3fprintingsolutions@gmail.com') {
+          // Create admin record if it doesn't exist
+          const { error: createError } = await supabase
+            .from('admin_users')
+            .insert({ 
+              email: email,
+              user_id: userId,
+              role: 'admin',
+              created_at: new Date().toISOString(),
+              permissions: DEFAULT_ADMIN_PERMISSIONS
+            });
+            
+          if (createError) {
+            console.error("Error creating admin record:", createError);
+            setError('Error creating admin account.');
+            toast.error('Error creating admin account.');
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
           
-        if (updateError) {
-          console.error("Error updating admin user_id:", updateError);
+          // Set admin state with the newly created record
+          setAdmin({
+            id: userId,
+            email: email,
+            role: 'admin',
+            created_at: new Date().toISOString(),
+            user_id: userId,
+            permissions: DEFAULT_ADMIN_PERMISSIONS
+          });
+          
+          toast.success('Admin login successful');
+          navigate('/admin/dashboard');
+          return;
+        } else {
+          // For other users who aren't recognized admins
+          setError('You are not authorized as an admin.');
+          toast.error('You are not authorized as an admin.');
+          await supabase.auth.signOut(); // Sign out if not an admin
+          setLoading(false);
+          return;
         }
       }
 
-      // Set admin state and navigate
+      // Explicitly cast to our concrete type
+      const adminRecord = adminData as AdminData;
+      
+      // Successfully found admin record
+      console.log("Admin record found:", adminRecord);
+      
+      // Create the admin user object with fallbacks
       setAdmin({
-        id: adminData.id,
-        user_id: adminData.user_id || userId,
-        email: adminData.email,
-        role: adminData.role,
-        created_at: adminData.created_at
+        id: adminRecord.id || '',
+        email: adminRecord.email || '',
+        role: adminRecord.role || 'admin',
+        created_at: adminRecord.created_at || '',
+        updated_at: adminRecord.updated_at || undefined,
+        user_id: adminRecord.user_id || userId,
+        permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
       });
       
       toast.success('Admin login successful');
@@ -143,6 +195,7 @@ const AdminLogin = () => {
     }
   };
 
+  
   if (admin) {
     return (
       <div className="container mx-auto px-4 py-8">

@@ -1,3 +1,4 @@
+
 export interface CartItem {
   id: string;
   name: string;
@@ -105,8 +106,7 @@ export interface TrackingInfo {
 
 export interface UserProfile {
   id: string;
-  user_id?: string; // Making this optional to solve the AdminCustomers error
-  email: string;
+  email?: string;
   first_name?: string;
   last_name?: string;
   phone?: string;
@@ -116,6 +116,9 @@ export interface UserProfile {
   display_name?: string;
   phone_number?: string;
   reward_points?: number;
+  auth_user?: {
+    email: string;
+  };
 }
 
 export interface ShippingAddress {
@@ -126,4 +129,14 @@ export interface ShippingAddress {
   zipcode?: string;
   zipCode?: string; // For backwards compatibility
   country?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  user_id?: string | null;
+  permissions?: string[];
 }

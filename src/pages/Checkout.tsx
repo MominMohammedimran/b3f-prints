@@ -10,6 +10,7 @@ import ShippingDetailsForm from '../components/checkout/ShippingDetailsForm';
 import { useLocation } from '../context/LocationContext';
 import { useCart } from '../context/CartContext';
 import { useAddresses } from '../hooks/useAddresses';
+import SavedAddresses from '@/components/checkout/SavedAddresses';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -135,7 +136,7 @@ const Checkout = () => {
           city: firstAddress.city || '',
           state: firstAddress.state || '',
           zipCode: firstAddress.zipcode || '',
-          country: defaultAddress.country || 'India',
+          country: firstAddress.country || 'India',
         });
       } else {
         setUseNewAddress(true);
@@ -323,53 +324,15 @@ const Checkout = () => {
                 </div>
               )}
               
-              {/* Saved Addresses Section */}
-              {addresses && addresses.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="font-medium mb-2">Select a Shipping Address</h3>
-                  <div className="space-y-3">
-                    {addresses.map((address) => (
-                      <div 
-                        key={address.id} 
-                        className={`border p-3 rounded-md cursor-pointer hover:bg-gray-50 ${
-                          selectedAddressId === address.id && !useNewAddress ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        }`}
-                        onClick={() => handleAddressSelect(address.id)}
-                      >
-                        <div className="flex justify-between">
-                          <div className="font-medium">
-                            {address.first_name} {address.last_name}
-                            {address.is_default && (
-                              <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Default</span>
-                            )}
-                          </div>
-                          {selectedAddressId === address.id && !useNewAddress && (
-                            <div className="text-blue-600 text-sm">Selected</div>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {address.street}, {address.city}, {address.state} {address.zipcode}
-                        </div>
-                        <div className="text-sm text-gray-600">{address.phone}</div>
-                      </div>
-                    ))}
-                    
-                    <div
-                      className={`border p-3 rounded-md cursor-pointer hover:bg-gray-50 ${
-                        useNewAddress ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
-                      onClick={handleUseNewAddress}
-                    >
-                      <div className="flex justify-between">
-                        <div className="font-medium">Use a new address</div>
-                        {useNewAddress && (
-                          <div className="text-blue-600 text-sm">Selected</div>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">Add a new shipping address</div>
-                    </div>
-                  </div>
-                </div>
+              {/* Saved Addresses Component */}
+              {!addressesLoading && (
+                <SavedAddresses
+                  addresses={addresses}
+                  selectedAddressId={selectedAddressId}
+                  onAddressSelect={handleAddressSelect}
+                  onUseNewAddress={handleUseNewAddress}
+                  useNewAddress={useNewAddress}
+                />
               )}
               
               <ShippingDetailsForm

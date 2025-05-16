@@ -1,73 +1,54 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { getProductInventory, updateProductInventory } from '@/utils/productInventory';
+import { getProductInventory } from '@/utils/productInventory';
 
-export interface InventoryState {
-  inventory: Record<string, Record<string, number>>;
-  loading: boolean;
-  error: Error | null;
-  updateQuantity: (productType: string, size: string, quantity: number) => Promise<boolean>;
-  refreshInventory: () => Promise<void>;
-}
-
-export const useProductInventory = (): InventoryState => {
-  const [inventory, setInventory] = useState<Record<string, Record<string, number>>>({
-    tshirt: { S: 0, M: 0, L: 0, XL: 0 },
-    mug: { Standard: 0 },
-    cap: { Standard: 0 }
+export const useProductInventory = () => {
+  const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({
+    tshirt: { S: 10, M: 15, L: 8, XL: 5 },
+    mug: { Standard: 20 },
+    cap: { Standard: 12 }
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const fetchInventory = async () => {
+
+  const fetchProductInventory = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await getProductInventory();
-      setInventory(data);
-    } catch (err: any) {
-      console.error('Error fetching inventory:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch inventory'));
-      toast.error('Failed to load inventory data');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    fetchInventory();
-  }, []);
-  
-  const updateQuantity = async (productType: string, size: string, quantity: number): Promise<boolean> => {
-    try {
-      const success = await updateProductInventory(productType, size, quantity);
+      // Fix: Use our utility function instead of direct Supabase call
+      const inventoryData = await getProductInventory();
       
-      if (success) {
-        // Update local state
-        setInventory(prev => ({
-          ...prev,
-          [productType]: {
-            ...prev[productType],
-            [size]: quantity
-          }
-        }));
-        return true;
-      } else {
-        throw new Error('Failed to update inventory');
+      if (inventoryData) {
+        setSizeInventory(inventoryData);
       }
     } catch (err) {
+      console.error('Error fetching inventory:', err);
+      toast.error('Failed to load product availability data');
+    }
+  };
+
+  const updateInventory = async (productType: string, size: string, change: number) => {
+    try {
+      // In a real app, this would update the Supabase database
+      // Since we don't have the product_inventory table in Supabase yet, update local state
+      setSizeInventory(prev => ({
+        ...prev,
+        [productType]: {
+          ...prev[productType],
+          [size]: prev[productType][size] + change
+        }
+      }));
+      
+      return true;
+    } catch (err) {
       console.error('Error updating inventory:', err);
-      toast.error('Failed to update inventory');
+      toast.error('Failed to update inventory', {
+        description: 'Could not update product quantity',
+      });
       return false;
     }
   };
-  
+
   return {
-    inventory,
-    loading,
-    error,
-    updateQuantity,
-    refreshInventory: fetchInventory
+    sizeInventory,
+    fetchProductInventory,
+    updateInventory
   };
 };

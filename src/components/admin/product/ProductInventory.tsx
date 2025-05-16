@@ -1,65 +1,33 @@
 
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getProductInventory, updateProductInventory } from '@/utils/productInventory';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, RefreshCw } from 'lucide-react';
+import { useProductInventory } from '@/hooks/useProductInventory';
 
 const ProductInventory = () => {
-  const [inventory, setInventory] = useState<Record<string, Record<string, number>>>({
-    tshirt: { S: 0, M: 0, L: 0, XL: 0 },
-    mug: { Standard: 0 },
-    cap: { Standard: 0 }
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        setLoading(true);
-        const data = await getProductInventory();
-        setInventory(data);
-      } catch (error) {
-        console.error('Failed to fetch inventory:', error);
-        toast.error('Failed to fetch inventory data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchInventory();
-  }, []);
+  const { inventory, loading, updateQuantity, refreshInventory } = useProductInventory();
+  const [updatingItem, setUpdatingItem] = React.useState<string | null>(null);
   
   const handleQuantityChange = (productType: string, size: string, value: string) => {
     const quantity = parseInt(value, 10) || 0;
-    setInventory(prev => ({
-      ...prev,
-      [productType]: {
-        ...prev[productType],
-        [size]: quantity
-      }
-    }));
+    handleSaveInventory(productType, size, quantity);
   };
   
-  const handleSaveInventory = async (productType: string, size: string) => {
+  const handleSaveInventory = async (productType: string, size: string, quantity: number) => {
+    const itemKey = `${productType}_${size}`;
     try {
-      setSaving(true);
-      const quantity = inventory[productType][size];
-      const success = await updateProductInventory(productType, size, quantity);
+      setUpdatingItem(itemKey);
+      const success = await updateQuantity(productType, size, quantity);
       
       if (success) {
-        toast.success(`Updated ${productType} ${size} inventory to ${quantity}`);
-      } else {
-        throw new Error('Failed to update inventory');
+        console.log(`Updated ${productType} ${size} inventory to ${quantity}`);
       }
     } catch (error) {
       console.error('Error saving inventory:', error);
-      toast.error('Failed to update inventory');
     } finally {
-      setSaving(false);
+      setUpdatingItem(null);
     }
   };
   
@@ -79,9 +47,14 @@ const ProductInventory = () => {
   
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Product Inventory</CardTitle>
-        <CardDescription>Manage product inventory levels</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Product Inventory</CardTitle>
+          <CardDescription>Manage product inventory levels</CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={refreshInventory}>
+          <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* T-shirts */}
@@ -100,10 +73,11 @@ const ProductInventory = () => {
                 />
                 <Button 
                   size="sm" 
-                  onClick={() => handleSaveInventory('tshirt', size)}
-                  disabled={saving}
+                  disabled={updatingItem === `tshirt_${size}`}
                 >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {updatingItem === `tshirt_${size}` ? 
+                    <Loader2 className="h-4 w-4 animate-spin" /> : 
+                    <Save className="h-4 w-4" />}
                 </Button>
               </div>
             ))}
@@ -126,10 +100,11 @@ const ProductInventory = () => {
                 />
                 <Button 
                   size="sm" 
-                  onClick={() => handleSaveInventory('mug', size)}
-                  disabled={saving}
+                  disabled={updatingItem === `mug_${size}`}
                 >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {updatingItem === `mug_${size}` ? 
+                    <Loader2 className="h-4 w-4 animate-spin" /> : 
+                    <Save className="h-4 w-4" />}
                 </Button>
               </div>
             ))}
@@ -151,11 +126,12 @@ const ProductInventory = () => {
                   className="w-24"
                 />
                 <Button 
-                  size="sm" 
-                  onClick={() => handleSaveInventory('cap', size)}
-                  disabled={saving}
+                  size="sm"
+                  disabled={updatingItem === `cap_${size}`}
                 >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {updatingItem === `cap_${size}` ? 
+                    <Loader2 className="h-4 w-4 animate-spin" /> : 
+                    <Save className="h-4 w-4" />}
                 </Button>
               </div>
             ))}

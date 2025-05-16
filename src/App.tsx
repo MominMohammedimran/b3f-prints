@@ -50,7 +50,7 @@ import AdminLocations from './pages/admin/AdminLocations';
 import AdminNotFound from './pages/admin/AdminNotFound';
 
 import { Toaster } from "@/components/ui/toaster";
-import { initializeAdminSetup, createDefaultAdminIfNeeded, ensureAdminExists } from './utils/setupAdmin';
+import { ensureAdminExists } from './utils/setupInitialAdmin';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -69,8 +69,6 @@ function App() {
     // Initialize admin users on app startup
     const setupAdmin = async () => {
       try {
-        await initializeAdminSetup();
-        await createDefaultAdminIfNeeded();
         // Ensure our specific admin exists
         await ensureAdminExists();
         setIsAdminSetupDone(true);

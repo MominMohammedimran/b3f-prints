@@ -38,3 +38,17 @@ USING (bucket_id = 'products' AND auth.uid() = owner);
 CREATE POLICY "Allow authenticated deletes for products bucket"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'products' AND auth.uid() = owner);
+
+
+
+-- Allow read access for everyone
+CREATE POLICY "Allow read access"
+ON products
+FOR SELECT
+USING (true);
+
+-- Allow update access for everyone (optional, secure in prod)
+CREATE POLICY "Allow update access"
+ON products
+FOR UPDATE
+USING (true);

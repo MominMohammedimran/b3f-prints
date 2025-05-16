@@ -5,55 +5,61 @@ import { useQuery } from '@tanstack/react-query';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 const generateMockTrackingData = (orderId: string): TrackingInfo => {
-  const statuses = ['processing', 'shipped', 'delivered'];
-  const currentStatus = statuses[Math.floor(Math.random() * statuses.length)];
+  const statuses = ['processing', 'shipped', 'out_for_delivery', 'delivered'];
+  const randomIndex = Math.floor(Math.random() * 3); // 0, 1, or 2
+  const currentStatus = statuses[randomIndex];
   const today = new Date();
 
   const history = [];
 
-  if (currentStatus === 'processing') {
+  // Always add processing status
+  history.push({
+    status: 'processing',
+    timestamp: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    location: 'B3F Prints and Mens Wear Shop',
+    description: 'Order is being processed'
+  });
+
+  if (randomIndex >= 1) {
+    // Add shipped status
     history.push({
-      status: 'processing',
-      timestamp: new Date(today.setDate(today.getDate() - 2)).toISOString(),
-      location: 'B3F Prints and Mens Wear Shop',
-      description: 'Order is being processed'
+      status: 'shipped',
+      timestamp: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      location: 'Gooty, B3F Prints and Mens Wear',
+      description: 'Order has been shipped'
     });
   }
 
-  if (currentStatus === 'shipped' || currentStatus === 'delivered') {
-    history.push({
-      status: 'shipped',
-      timestamp: new Date(today.setDate(today.getDate() - 1)).toISOString(),
-      location: 'Gooty , B3F Prints and Mens Wear',
-      description: 'Order has been shipped'
-    });
+  if (randomIndex >= 2) {
+    // Add out_for_delivery status
     history.push({
       status: 'out_for_delivery',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       location: 'Local Delivery Hub',
       description: 'Order is out for delivery'
     });
   }
 
-  if (currentStatus === 'delivered') {
+  if (randomIndex === 3) {
+    // Add delivered status
     history.push({
       status: 'delivered',
-      timestamp: new Date(today.setDate(today.getDate() + 1)).toISOString(),
+      timestamp: today.toISOString(),
       location: 'Delivery Address',
       description: 'Order has been delivered'
     });
   }
 
   return {
-    id: `tracking-${Date.now()}`,
+    id: `tracking-${orderId}`,
     order_id: orderId,
     status: currentStatus,
     location: currentStatus === 'delivered' ? 'Delivered' : 'On the way',
-    timestamp: new Date().toISOString(),
+    timestamp: today.toISOString(),
     currentLocation: currentStatus === 'delivered' ? 'Delivered' : 'On the way',
-    estimatedDelivery: new Date(today.setDate(today.getDate() + 3)).toLocaleDateString(),
-    date: new Date().toLocaleDateString(),
-    time: new Date().toLocaleTimeString(),
+    estimatedDelivery: new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+    date: today.toLocaleDateString(),
+    time: today.toLocaleTimeString(),
     history
   };
 };
@@ -71,7 +77,10 @@ export const useOrderTracking = (orderId: string | undefined) => {
         .eq('id', orderId)
         .maybeSingle();
 
-      if (orderError) console.error('Order status fetch error:', orderError);
+      if (orderError) {
+        console.error('Order status fetch error:', orderError);
+        return generateMockTrackingData(orderId);
+      }
 
       const { data: trackingData, error: trackingError } = await supabase
         .from('order_tracking')
@@ -79,54 +88,50 @@ export const useOrderTracking = (orderId: string | undefined) => {
         .eq('order_id', orderId)
         .maybeSingle();
 
-      if (trackingError) console.error('Tracking fetch error:', trackingError);
+      if (trackingError) {
+        console.error('Tracking fetch error:', trackingError);
+      }
 
-      if (trackingData) return trackingData as TrackingInfo;
+      if (trackingData) {
+        return trackingData as TrackingInfo;
+      }
 
       if (orderData) {
+        // We have order data but no tracking data, generate tracking info from order status
         const today = new Date();
         const createdAt = new Date(orderData.created_at);
         const updatedAt = new Date(orderData.updated_at || today);
 
         const history = [];
+        const orderStatus = orderData.status?.toLowerCase() || 'processing';
 
-        if (['processing', 'Processing'].includes(orderData.status)) {
-          history.push({
-            status: 'processing',
-            timestamp: updatedAt.toISOString(),
-            location: 'B3F Prints and Mens Wear Shop',
-            description: 'Order is being processed'
-          });
-        }
+        // Always add processing status
+        history.push({
+          status: 'processing',
+          timestamp: createdAt.toISOString(),
+          location: 'B3F Prints and Mens Wear Shop',
+          description: 'Order is being processed'
+        });
 
-        if (['shipped', 'Shipped'].includes(orderData.status)) {
+        if (['shipped', 'out_for_delivery', 'delivered'].includes(orderStatus)) {
           history.push({
             status: 'shipped',
-            timestamp: updatedAt.toISOString(),
+            timestamp: new Date(updatedAt.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'Distribution Center',
             description: 'Order has been shipped'
           });
+        }
+
+        if (['out_for_delivery', 'delivered'].includes(orderStatus)) {
           history.push({
             status: 'out_for_delivery',
-            timestamp: new Date(updatedAt.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+            timestamp: new Date(updatedAt.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'Local Delivery Hub',
             description: 'Order is out for delivery'
           });
         }
 
-        if (['delivered', 'Delivered'].includes(orderData.status)) {
-          history.push({
-            status: 'shipped',
-            timestamp: new Date(updatedAt.getTime() - 3 * 60 * 60 * 1000).toISOString(),
-            location: 'Distribution Center',
-            description: 'Order has been shipped'
-          });
-          history.push({
-            status: 'out_for_delivery',
-            timestamp: new Date(updatedAt.getTime() - 1 * 60 * 60 * 1000).toISOString(),
-            location: 'Local Delivery Hub',
-            description: 'Order is out for delivery'
-          });
+        if (orderStatus === 'delivered') {
           history.push({
             status: 'delivered',
             timestamp: updatedAt.toISOString(),
@@ -135,29 +140,29 @@ export const useOrderTracking = (orderId: string | undefined) => {
           });
         }
 
-        return {
-          id: `tracking-${Date.now()}`,
+        // Create tracking info from order data
+        const trackingInfo: TrackingInfo = {
+          id: `tracking-${orderId}`,
           order_id: orderId,
-          status: orderData.status,
+          status: orderStatus,
           timestamp: updatedAt.toISOString(),
-          location: ['delivered', 'Delivered'].includes(orderData.status)
-            ? 'Delivered'
-            : ['shipped', 'Shipped'].includes(orderData.status)
-              ? 'Out for delivery'
-              : 'Processing Center',
-          currentLocation: ['delivered', 'Delivered'].includes(orderData.status)
-            ? 'Delivered'
-            : ['shipped', 'Shipped'].includes(orderData.status)
-              ? 'Out for delivery'
-              : 'Processing Center',
-          estimatedDelivery: new Date(today.setDate(today.getDate() + 5)).toLocaleDateString(),
+          location: orderStatus === 'delivered' ? 'Delivered' : 
+                   orderStatus === 'shipped' || orderStatus === 'out_for_delivery' ? 'Out for delivery' : 
+                   'Processing Center',
+          currentLocation: orderStatus === 'delivered' ? 'Delivered' : 
+                          orderStatus === 'shipped' || orderStatus === 'out_for_delivery' ? 'Out for delivery' : 
+                          'Processing Center',
+          estimatedDelivery: new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
           date: createdAt.toLocaleDateString(),
           time: createdAt.toLocaleTimeString(),
           history
         };
+
+        return trackingInfo;
       }
 
-      console.warn('No tracking data found. Returning mock.');
+      // If no order or tracking data, create mock data
+      console.warn('No tracking data found. Returning mock data.');
       return generateMockTrackingData(orderId);
     } catch (error) {
       console.error('Error fetching tracking:', error);

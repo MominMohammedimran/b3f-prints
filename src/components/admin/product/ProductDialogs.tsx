@@ -1,15 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Product } from '@/lib/types';
-import ProductEditForm from '@/components/admin/ProductEditForm';
-import ImageDropzone from '@/components/ImageDropzone';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import ProductForm from './form/ProductForm';
 
 interface ProductDialogsProps {
   showEditDialog: boolean;
@@ -32,30 +25,33 @@ const ProductDialogs: React.FC<ProductDialogsProps> = ({
   onImageSelected,
   onSaveProduct
 }) => {
+  // Default empty product for the add dialog
+  const [newProduct, setNewProduct] = useState<Product>({
+    id: '',
+    name: '',
+    description: '',
+    price: 0,
+    originalPrice: 0,
+    discountPercentage: 0,
+    image: '',
+    images: [],
+    code: '',
+    category: '',
+    tags: [],
+    sizes: [],
+    stock: 0
+  });
+  
   return (
     <>
       {/* Edit Product Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={onEditDialogChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>
-              Make changes to the product information.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="mb-4">
-            <h3 className="text-sm font-medium mb-2">Product Image</h3>
-            <ImageDropzone onImageSelected={onImageSelected} />
-            {imagePreviewUrl && (
-              <div className="mt-2 text-sm text-gray-500">
-                Current image will be kept unless a new one is uploaded.
-              </div>
-            )}
-          </div>
-          
-          {selectedProduct && (
-            <ProductEditForm 
+      {selectedProduct && (
+        <Dialog open={showEditDialog} onOpenChange={onEditDialogChange}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+            </DialogHeader>
+            <ProductForm
               product={{
                 ...selectedProduct,
                 image: imagePreviewUrl || selectedProduct.image
@@ -63,40 +59,20 @@ const ProductDialogs: React.FC<ProductDialogsProps> = ({
               onSave={onSaveProduct}
               onCancel={() => onEditDialogChange(false)}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Add Product Dialog */}
       <Dialog open={showAddDialog} onOpenChange={onAddDialogChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Create a new product.
-            </DialogDescription>
+            <DialogTitle>Add Product</DialogTitle>
           </DialogHeader>
-          
-          <div className="mb-4">
-            <h3 className="text-sm font-medium mb-2">Product Image</h3>
-            <ImageDropzone onImageSelected={onImageSelected} />
-          </div>
-          
-          <ProductEditForm 
+          <ProductForm
             product={{
-              id: '',
-              code: '',
-              name: '',
-              description: '',
-              price: 0,
-              originalPrice: 0,
-              discountPercentage: 0,
-              image: imagePreviewUrl,
-              rating: 0,
-              category: '',
-              tags: [],
-              sizes: [],
-              stock: 0
+              ...newProduct,
+              image: imagePreviewUrl
             }}
             onSave={onSaveProduct}
             onCancel={() => onAddDialogChange(false)}
