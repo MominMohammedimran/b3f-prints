@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const baseUrl = 'https://b3f-clothing.pages.dev';
+const baseUrl = 'https://b3f-prints.pages.dev';
 
 // Define your URLs here (you can extend this later to pull from your routes or database)
 const urls = [
