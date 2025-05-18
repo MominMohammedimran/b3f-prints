@@ -1,6 +1,4 @@
-
 -- Schema for the application database
--- This file defines the database schema in a declarative way
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -106,7 +104,7 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create stored procedures
+-- Stored procedures
 CREATE OR REPLACE FUNCTION create_order(
   p_user_id UUID,
   p_order_number TEXT,
@@ -127,11 +125,11 @@ BEGIN
     p_user_id, p_order_number, p_total, p_status, p_items, p_payment_method, p_delivery_fee, p_shipping_address
   )
   RETURNING id INTO v_order_id;
-  
+
   SELECT row_to_json(o) INTO v_result
   FROM public.orders o
   WHERE o.id = v_order_id;
-  
+
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -153,16 +151,16 @@ BEGIN
     p_order_id, p_status, p_current_location, p_estimated_delivery::TIMESTAMP WITH TIME ZONE, p_history
   )
   RETURNING id INTO v_tracking_id;
-  
+
   SELECT row_to_json(t) INTO v_result
   FROM public.order_tracking t
   WHERE t.id = v_tracking_id;
-  
+
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION get_order_by_id(order_id UUID) 
+CREATE OR REPLACE FUNCTION get_order_by_id(order_id UUID)
 RETURNS JSON AS $$
 DECLARE
   v_result JSON;
@@ -171,12 +169,12 @@ BEGIN
   INTO v_result
   FROM public.orders o
   WHERE o.id = order_id;
-  
+
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION get_order_tracking(order_id UUID) 
+CREATE OR REPLACE FUNCTION get_order_tracking(order_id UUID)
 RETURNS JSON AS $$
 DECLARE
   v_result JSON;
@@ -185,14 +183,12 @@ BEGIN
   INTO v_result
   FROM public.order_tracking t
   WHERE t.order_id = order_id;
-  
+
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Set up Row Level Security policies
-
--- Enable RLS on all tables
+-- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
@@ -204,37 +200,52 @@ ALTER TABLE public.user_location_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for profiles
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 CREATE POLICY "Users can view their own profile"
-  ON public.profiles
-  FOR SELECT
+  ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
-  ON public.profiles
-  FOR UPDATE
+  ON public.profiles FOR UPDATE
   USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.profiles;
+CREATE POLICY "Admins can manage all profiles"
+  ON public.profiles FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
 
 -- RLS Policies for addresses
+DROP POLICY IF EXISTS "Users can manage their own addresses" ON public.addresses;
 CREATE POLICY "Users can manage their own addresses"
-  ON public.addresses
-  FOR ALL
+  ON public.addresses FOR ALL
   USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can manage all addresses" ON public.addresses;
+CREATE POLICY "Admins can manage all addresses"
+  ON public.addresses FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
 
 -- RLS Policies for orders
+DROP POLICY IF EXISTS "Users can view their own orders" ON public.orders;
 CREATE POLICY "Users can view their own orders"
-  ON public.orders
-  FOR SELECT
+  ON public.orders FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own orders" ON public.orders;
 CREATE POLICY "Users can create their own orders"
-  ON public.orders
-  FOR INSERT
+  ON public.orders FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
--- RLS Policies for order tracking
+DROP POLICY IF EXISTS "Admins can manage all orders" ON public.orders;
+CREATE POLICY "Admins can manage all orders"
+  ON public.orders FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
+
+-- RLS Policies for order_tracking
+DROP POLICY IF EXISTS "Users can view tracking for their own orders" ON public.order_tracking;
 CREATE POLICY "Users can view tracking for their own orders"
-  ON public.order_tracking
-  FOR SELECT
+  ON public.order_tracking FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.orders
@@ -242,43 +253,57 @@ CREATE POLICY "Users can view tracking for their own orders"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all order tracking" ON public.order_tracking;
+CREATE POLICY "Admins can manage all order tracking"
+  ON public.order_tracking FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
+
 -- RLS Policies for carts
+DROP POLICY IF EXISTS "Users can manage their own cart" ON public.carts;
 CREATE POLICY "Users can manage their own cart"
-  ON public.carts
-  FOR ALL
+  ON public.carts FOR ALL
   USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can manage all carts" ON public.carts;
+CREATE POLICY "Admins can manage all carts"
+  ON public.carts FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
 
 -- RLS Policies for wishlists
+DROP POLICY IF EXISTS "Users can manage their own wishlist" ON public.wishlists;
 CREATE POLICY "Users can manage their own wishlist"
-  ON public.wishlists
-  FOR ALL
+  ON public.wishlists FOR ALL
   USING (auth.uid() = user_id);
 
--- RLS Policies for locations (public read)
+DROP POLICY IF EXISTS "Admins can manage all wishlists" ON public.wishlists;
+CREATE POLICY "Admins can manage all wishlists"
+  ON public.wishlists FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
+
+-- RLS Policies for locations
+DROP POLICY IF EXISTS "Public can view locations" ON public.locations;
 CREATE POLICY "Public can view locations"
-  ON public.locations
-  FOR SELECT
+  ON public.locations FOR SELECT
   USING (true);
 
--- RLS Policies for user location preferences
+DROP POLICY IF EXISTS "Admins can manage all locations" ON public.locations;
+CREATE POLICY "Admins can manage all locations"
+  ON public.locations FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
+
+-- RLS Policies for user_location_preferences
+DROP POLICY IF EXISTS "Users can manage their own location preferences" ON public.user_location_preferences;
 CREATE POLICY "Users can manage their own location preferences"
-  ON public.user_location_preferences
-  FOR ALL
+  ON public.user_location_preferences FOR ALL
   USING (auth.uid() = user_id);
 
--- RLS Policies for admin users
-CREATE POLICY "Admins can view admin_users"
-  ON public.admin_users
-  FOR SELECT
-  USING (
-    auth.email() IN (SELECT email FROM public.admin_users)
-  );
+DROP POLICY IF EXISTS "Admins can manage all user location preferences" ON public.user_location_preferences;
+CREATE POLICY "Admins can manage all user location preferences"
+  ON public.user_location_preferences FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
 
--- Insert initial data
-INSERT INTO public.locations (name, code)
-VALUES 
-  ('Karnataka', 'KA'),
-  ('Tamil Nadu', 'TN'),
-  ('Kerala', 'KL'),
-  ('Andhra Pradesh', 'AP')
-ON CONFLICT (code) DO NOTHING;
+-- RLS Policies for admin_users
+DROP POLICY IF EXISTS "Admins can manage admin users" ON public.admin_users;
+CREATE POLICY "Admins can manage admin users"
+  ON public.admin_users FOR ALL
+  USING (auth.email() IN (SELECT email FROM public.admin_users));
