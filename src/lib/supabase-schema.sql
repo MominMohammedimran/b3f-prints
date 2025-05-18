@@ -1,8 +1,3 @@
--- =============================
--- Extensions
--- =============================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =============================
 -- Product Catalog
@@ -31,8 +26,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Product Variants Table (e.g., size, color)
-CREATE TABLE IF NOT EXISTS public.product_variants (
+-- Admin users table
+CREATE TABLE IF NOT EXISTS public.admin_users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
   size TEXT,
@@ -43,110 +38,182 @@ CREATE TABLE IF NOT EXISTS public.product_variants (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Product Images Table
-CREATE TABLE IF NOT EXISTS public.product_images (
+-- Wishlist table
+CREATE TABLE IF NOT EXISTS public.wishlists (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
-  image_url TEXT NOT NULL,
-  is_main BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  product_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  price NUMERIC NOT NULL,
+  image TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
 );
 
--- Reviews Table
-CREATE TABLE IF NOT EXISTS public.reviews (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
-  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  comment TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Insert initial locations
+INSERT INTO public.locations (name, code, is_active)
+VALUES 
+  ('Karnataka', 'KA', true),
+  ('Andhra Pradesh', 'AP', true),
+  ('Tamil Nadu', 'TN', true),
+  ('Kerala', 'KL', true)
+ON CONFLICT (code) DO NOTHING;
 
--- =============================
--- Enable Row-Level Security (RLS)
--- =============================
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.product_variants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+-- Create stored procedure for creating orders
+CREATE OR REPLACE FUNCTION create_order(
+  p_user_id UUID,
+  p_order_number TEXT,
+  p_total NUMERIC,
+  p_status TEXT,
+  p_items JSONB,
+  p_payment_method TEXT,
+  p_delivery_fee NUMERIC,
+  p_shipping_address JSONB
+) RETURNS JSON AS $$
+DECLARE
+  v_order_id UUID;
+  v_result JSON;
+BEGIN
+  INSERT INTO public.orders (
+    user_id, order_number, total, status, items, payment_method, delivery_fee, shipping_address
+  ) VALUES (
+    p_user_id, p_order_number, p_total, p_status, p_items, p_payment_method, p_delivery_fee, p_shipping_address
+  )
+  RETURNING id INTO v_order_id;
+  
+  SELECT row_to_json(o) INTO v_result
+  FROM public.orders o
+  WHERE o.id = v_order_id;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- =============================
--- RLS Policies
--- =============================
+-- Create stored procedure for creating order tracking
+CREATE OR REPLACE FUNCTION create_order_tracking(
+  p_order_id UUID,
+  p_status TEXT,
+  p_current_location TEXT,
+  p_estimated_delivery TEXT,
+  p_history JSONB
+) RETURNS JSON AS $$
+DECLARE
+  v_tracking_id UUID;
+  v_result JSON;
+BEGIN
+  INSERT INTO public.order_tracking (
+    order_id, status, current_location, estimated_delivery, history
+  ) VALUES (
+    p_order_id, p_status, p_current_location, p_estimated_delivery::TIMESTAMP WITH TIME ZONE, p_history
+  )
+  RETURNING id INTO v_tracking_id;
+  
+  SELECT row_to_json(t) INTO v_result
+  FROM public.order_tracking t
+  WHERE t.id = v_tracking_id;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Categories Policies
-DROP POLICY IF EXISTS "Public can view categories" ON public.categories;
-CREATE POLICY "Public can view categories"
-  ON public.categories FOR SELECT
-  USING (true);
+-- Create stored procedure for fetching order by ID
+CREATE OR REPLACE FUNCTION get_order_by_id(order_id UUID) 
+RETURNS JSON AS $$
+DECLARE
+  v_result JSON;
+BEGIN
+  SELECT row_to_json(o)
+  INTO v_result
+  FROM public.orders o
+  WHERE o.id = order_id;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP POLICY IF EXISTS "Admins can manage categories" ON public.categories;
-CREATE POLICY "Admins can manage categories"
-  ON public.categories FOR ALL
-  USING (auth.email() IN (SELECT email FROM public.admin_users))
-  WITH CHECK (auth.email() IN (SELECT email FROM public.admin_users));
+-- Create stored procedure for fetching order tracking
+CREATE OR REPLACE FUNCTION get_order_tracking(order_id UUID) 
+RETURNS JSON AS $$
+DECLARE
+  v_result JSON;
+BEGIN
+  SELECT row_to_json(t)
+  INTO v_result
+  FROM public.order_tracking t
+  WHERE t.order_id = order_id;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Products Policies
-DROP POLICY IF EXISTS "Public can view products" ON public.products;
-CREATE POLICY "Public can view products"
-  ON public.products FOR SELECT
-  USING (is_active = true);
+-- Add RLS policies for all tables
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_tracking ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.designs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Admins can manage all products" ON public.products;
-CREATE POLICY "Admins can manage all products"
-  ON public.products FOR ALL
-  USING (auth.email() IN (SELECT email FROM public.admin_users))
-  WITH CHECK (auth.email() IN (SELECT email FROM public.admin_users));
-
--- Product Variants Policies
-DROP POLICY IF EXISTS "Public can view variants" ON public.product_variants;
-CREATE POLICY "Public can view variants"
-  ON public.product_variants FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS "Admins can manage variants" ON public.product_variants;
-CREATE POLICY "Admins can manage variants"
-  ON public.product_variants FOR ALL
-  USING (auth.email() IN (SELECT email FROM public.admin_users))
-  WITH CHECK (auth.email() IN (SELECT email FROM public.admin_users));
-
--- Product Images Policies
-DROP POLICY IF EXISTS "Public can view product images" ON public.product_images;
-CREATE POLICY "Public can view product images"
-  ON public.product_images FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS "Admins can manage product images" ON public.product_images;
-CREATE POLICY "Admins can manage product images"
-  ON public.product_images FOR ALL
-  USING (auth.email() IN (SELECT email FROM public.admin_users))
-  WITH CHECK (auth.email() IN (SELECT email FROM public.admin_users));
-
--- Reviews Policies
-DROP POLICY IF EXISTS "Users can view reviews" ON public.reviews;
-CREATE POLICY "Users can view reviews"
-  ON public.reviews FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS "Users can write reviews" ON public.reviews;
-CREATE POLICY "Users can write reviews"
-  ON public.reviews FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can update their own reviews" ON public.reviews;
-CREATE POLICY "Users can update their own reviews"
-  ON public.reviews FOR UPDATE
+-- Orders RLS policies
+CREATE POLICY "Users can view their own orders"
+  ON public.orders
+  FOR SELECT
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Admins can manage all reviews" ON public.reviews;
-CREATE POLICY "Admins can manage all reviews"
-  ON public.reviews FOR ALL
-  USING (auth.email() IN (SELECT email FROM public.admin_users));
+CREATE POLICY "Users can create their own orders"
+  ON public.orders
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
 
--- =============================
--- Indexes for performance
--- =============================
-CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_product ON public.reviews(product_id);
-CREATE INDEX IF NOT EXISTS idx_variants_product ON public.product_variants(product_id);
+CREATE POLICY "Users can update their own orders"
+  ON public.orders
+  FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Order tracking RLS policies
+CREATE POLICY "Users can view tracking for their own orders"
+  ON public.order_tracking
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.orders
+      WHERE orders.id = order_id AND orders.user_id = auth.uid()
+    )
+  );
+
+-- Designs RLS policies
+CREATE POLICY "Users can view their own designs"
+  ON public.designs
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own designs"
+  ON public.designs
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Locations RLS policies (public read, admin write)
+CREATE POLICY "Public can view locations"
+  ON public.locations
+  FOR SELECT
+  USING (true);
+
+-- Admin users RLS policies
+CREATE POLICY "Admins can view admin_users"
+  ON public.admin_users
+  FOR SELECT
+  USING (
+    auth.email() IN (SELECT email FROM public.admin_users)
+  );
+
+-- Wishlist RLS policies
+CREATE POLICY "Users can view their own wishlist"
+  ON public.wishlists
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own wishlist"
+  ON public.wishlists
+  FOR ALL
+  USING (auth.uid() = user_id);
