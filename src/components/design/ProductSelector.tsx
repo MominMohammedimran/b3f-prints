@@ -22,7 +22,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
   onProductSelect,
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-6">
+    <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-2">
       <h2 className="text-lg font-semibold mb-3">Select Product</h2>
       <div className="grid grid-cols-3 gap-3">
         {Object.entries(products).map(([id, product]) => (
@@ -33,7 +33,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
               activeProduct === id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
             }`}
           >
-            <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center mb-2">
+            <div className="w-14 h-12 bg-gray-100 rounded-md flex items-center justify-center mb-2">
               <img src={product.image} alt={product.name} className="w-12 h-12 object-contain" />
             </div>
             <span className="text-sm font-medium">{product.name}</span>

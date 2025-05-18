@@ -8,7 +8,7 @@ import { Toaster } from 'sonner'
 import { AuthProvider } from './context/AuthContext'
 import { LocationProvider } from './context/LocationContext'
 import { MicroservicesProvider } from './context/MicroservicesContext'
-import { WishlistProvider } from './context/WishlistContext'
+
 import { CartProvider } from './context/CartContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -36,12 +36,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <LocationProvider>
             <MicroservicesProvider>
-              <WishlistProvider>
+             
                 <CartProvider>
                   <App />
-                  <Toaster position="top-center" richColors closeButton />
+                  <Toaster position="top-center" offset={10} richColors closeButton />
                 </CartProvider>
-              </WishlistProvider>
+             
             </MicroservicesProvider>
           </LocationProvider>
         </AuthProvider>

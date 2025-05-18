@@ -4,7 +4,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
 import { MicroservicesProvider } from './context/MicroservicesContext';
-import { WishlistProvider } from './context/WishlistContext';
+
 import { CartProvider } from './context/CartContext';
 
 import './App.css';
@@ -25,7 +25,7 @@ import Search from './pages/Search';
 import NotFound from './pages/NotFound';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
-import Wishlist from './pages/Wishlist';
+
 import DesignTool from './pages/DesignTool';
 import AuthCallback from './pages/AuthCallback';
 import ProductDesigner from './pages/ProductDesigner';
@@ -73,8 +73,7 @@ function App() {
         await ensureAdminExists();
         setIsAdminSetupDone(true);
       } catch (error) {
-        console.error("Error initializing admin setup:", error);
-        setIsAdminSetupDone(true); // Continue anyway to not block the app
+         setIsAdminSetupDone(true); // Continue anyway to not block the app
       }
     };
     
@@ -86,7 +85,7 @@ function App() {
       <AuthProvider>
         <LocationProvider>
           <MicroservicesProvider>
-            <WishlistProvider>
+        
               <CartProvider>
                 <Routes>
                   {/* Public Routes */}
@@ -104,7 +103,7 @@ function App() {
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/search" element={<Search />} />
-                  <Route path="/wishlist" element={<Wishlist />} />
+                  
                   <Route path="/design-tool" element={<DesignTool />} />
                   <Route path="/about-us" element={<AboutUs />} />
                   <Route path="/contact-us" element={<ContactUs />} />
@@ -134,9 +133,9 @@ function App() {
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <Toaster />
+               
               </CartProvider>
-            </WishlistProvider>
+            
           </MicroservicesProvider>
         </LocationProvider>
       </AuthProvider>

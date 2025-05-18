@@ -40,7 +40,7 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
   validateDesign
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 mb-6 sticky top-20">
+    <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-6 sticky top-20">
       <ProductViewSelector 
         productType={activeProduct}
         currentView={productView}

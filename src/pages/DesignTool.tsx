@@ -368,7 +368,7 @@ const DesignTool = () => {
             />
             
             {isDualSided && activeProduct === 'tshirt' && (
-              <div className="mt-2 text-center">
+              <div className=" text-center">
                 <span className="text-blue-600 font-medium">
                   Currently designing: {productView === 'front' ? 'Front Side' : 'Back Side'}
                   {productView === 'front' && designComplete.front && ' ✅'}

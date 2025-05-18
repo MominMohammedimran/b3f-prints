@@ -43,7 +43,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   // Function to fetch wishlist data from Supabase
   const fetchWishlist = async (): Promise<Product[]> => {
-    console.log('Fetching wishlist for user:', currentUser?.id);
+ 
     
     if (!currentUser) {
       return [];
@@ -57,12 +57,10 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         .eq('user_id', currentUser.id);
 
       if (error) {
-        console.error('Error fetching wishlist:', error);
+      
         throw error;
       }
       
-      console.log('Wishlist data from DB:', wishlistData);
-
       // If we have wishlist items, construct Product objects
       if (wishlistData && wishlistData.length > 0) {
         const items: Product[] = wishlistData.map((item: any) => ({
@@ -84,7 +82,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       return [];
     } catch (error) {
-      console.error('Error in fetchWishlist:', error);
+      
       return [];
     }
   };
@@ -100,7 +98,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Update wishlistItems state when query data changes
   useEffect(() => {
     if (wishlistData) {
-      console.log('Setting wishlist items from query data:', wishlistData);
       setWishlistItems(wishlistData);
     }
     setIsLoading(isQueryLoading);
@@ -119,8 +116,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       if (!currentUser) return;
       
       try {
-        console.log('Wishlist action:', action);
-        
+         
         if (action.type === 'add' && action.product) {
           const productId = normalizeProductId(action.product);
           
@@ -169,8 +165,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       queryClient.invalidateQueries({ queryKey: ['wishlist', currentUser?.id] });
     },
     onError: (error) => {
-      console.error('Error in wishlist mutation:', error);
-    }
+        }
   });
   
   // Add a product to the wishlist
@@ -189,13 +184,11 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
       
       if (isInWishlist(productId)) {
-        console.log('Product already in wishlist:', productId);
-        setIsLoading(false);
+         setIsLoading(false);
         return; // Product already in wishlist
       }
       
-      console.log('Adding to wishlist:', product);
-      
+     
       // Add to Supabase
       await saveWishlist.mutateAsync({ type: 'add', product });
       
@@ -217,7 +210,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       setWishlistItems(prev => [...prev, newItem]);
       toast.success('Added to wishlist');
     } catch (error) {
-      console.error('Failed to add item to wishlist:', error);
       toast.error('Failed to add item to wishlist');
     } finally {
       setIsLoading(false);
