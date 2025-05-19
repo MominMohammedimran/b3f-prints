@@ -39,7 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
              
                 <CartProvider>
                   <App />
-                  <Toaster position="top-center" offset={10} richColors closeButton />
+                  <Toaster position="top-center" offset={12} richColors closeButton />
                 </CartProvider>
              
             </MicroservicesProvider>
