@@ -1,3 +1,4 @@
+
 // If this file exists, add these types to it. 
 // If not, create the file with these types.
 
@@ -10,11 +11,14 @@ export interface Product {
   originalPrice?: number;
   discountPercentage?: number;
   image: string;
+  images?: string[];
   rating?: number;
   category?: string;
   tags?: string[];
   stock?: number;
   productId?: string;
+  sizes?: string[];
+  additionalImages?: string[];
 }
 
 export interface CartItem {
@@ -39,13 +43,17 @@ export interface Order {
   created_at: string;
   updated_at: string;
   payment_method: string;
+  orderNumber?: string; // For compatibility with existing code
+  paymentMethod?: string; // For compatibility with existing code
   delivery_fee?: number;
   shipping_address?: any;
+  date?: string; // For compatibility with existing code
 }
 
 export interface TrackingInfo {
   id: string;
   order_id: string;
+  orderId?: string; // For backward compatibility
   status: string;
   timestamp: string;
   location: string;
@@ -75,8 +83,11 @@ export interface UserProfile {
   display_name?: string;
   avatar_url?: string;
   phone_number?: string;
+  phone?: string; // For compatibility
   created_at?: string;
   updated_at?: string;
+  reward_points?: number;
+  auth_user?: any; // For compatibility
 }
 
 export interface ShippingAddress {
@@ -104,4 +115,29 @@ export interface ProductInventoryItem {
   productType: string;
   size: string;
   quantity: number;
+}
+
+// Additional types needed by components
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  description?: string;
+}
+
+export interface Review {
+  id: string;
+  userId: string;
+  productId: string;
+  rating: number;
+  comment: string;
+  username: string;
+  createdAt: string;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  code: string;
 }

@@ -29,10 +29,10 @@ const ProductDetailsContent: React.FC<ProductDetailsContentProps> = ({ product }
   const [loading, setLoading] = useState(false);
   const { addToCart } = useCart();
   
-  // Set up product images (main + placeholder variations)
+  // Set up product images (main + additional images if available)
   const productImages = [
     product.image || ''
-  ].concat(product.additionalImages || []);
+  ].concat(product.additionalImages || product.images || []);
 
   const toggleSizeSelection = (index: number) => {
     const updatedSizes = [...sizes];

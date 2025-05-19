@@ -43,7 +43,7 @@ const TrackOrder = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Orders
           </Link>
-          <h1 className="text-2xl font-bold ml-4">Track Order #{tracking.orderNumber || tracking.id}</h1>
+          <h1 className="text-2xl font-bold ml-4">Track Order #{tracking.orderNumber || tracking.order_id || tracking.id}</h1>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -69,7 +69,7 @@ const TrackOrder = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Order Number</p>
-                <p className="font-medium">{tracking.orderNumber || tracking.id || 'Not available'}</p>
+                <p className="font-medium">{tracking.orderNumber || tracking.order_id || tracking.id || 'Not available'}</p>
               </div>
             </div>
           </div>
