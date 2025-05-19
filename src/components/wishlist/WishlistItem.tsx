@@ -5,13 +5,19 @@ import { Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface WishlistItemProps {
-  item: any;
+  item: {
+    id: string;
+    product_id: string;
+    name: string;
+    price: number;
+    image?: string;
+  };
   onRemove: (productId: string) => void;
   onAddToCart: (item: any) => void;
 }
 
 const WishlistItem: React.FC<WishlistItemProps> = ({ item, onRemove, onAddToCart }) => {
-  const productId = item.product_id || item.productId || item.id;
+  const productId = item.product_id;
   
   return (
     <div className="flex items-center border-b border-gray-200 py-4">

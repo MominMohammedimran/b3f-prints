@@ -1,222 +1,89 @@
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { X, Plus, Minus, Trash2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
+import React from 'react';
+import { Trash2, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ProductPlaceOrder from '@/components/products/ProductPlaceOrder';
-import CartItemSizeSelector from './CartItemSizeSelector';
+import { Link } from 'react-router-dom';
+import { CartItem } from '@/pages/Cart';
 
-interface CartItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  color?: string;
-  size?: string;
-  selectedSizes?: string[];
-}
-
-interface CartItemListProps {
+export interface CartItemListProps {
   cartItems: CartItem[];
+  onRemove: (itemId: string) => void;
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
 }
 
-const CartItemList: React.FC<CartItemListProps> = ({ cartItems }) => {
-  const { removeFromCart, updateQuantity, clearCart, addToCart } = useCart();
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  
-  const handleAction = (action: () => void) => {
-    if (!currentUser) {
-      toast.error('Please sign in to manage your cart');
-      navigate('/signin');
-      return;
-    }
-    
-    action();
-  };
-  
-  const incrementQuantity = (productId: string) => {
-    const item = cartItems.find(item => item.productId === productId);
-    if (item) {
-      handleAction(() => updateQuantity(productId, item.quantity + 1));
-    }
-  };
-  
-  const decrementQuantity = (productId: string) => {
-    const item = cartItems.find(item => item.productId === productId);
-    if (item && item.quantity > 1) {
-      handleAction(() => updateQuantity(productId, item.quantity - 1));
-    }
-  };
-  
-  const handleRemoveFromCart = (productId: string) => {
-    handleAction(() => removeFromCart(productId));
-  };
-  
-  const handleClearCart = () => {
-    handleAction(() => clearCart());
-  };
-  
-  const handleSizeChange = (productId: string, size: string) => {
-    const item = cartItems.find(item => item.productId === productId);
-    if (item) {
-      // Remove the old item
-      handleAction(() => {
-        removeFromCart(productId);
-        
-        // Add it back with the new size
-        setTimeout(() => {
-          addToCart({
-            ...item,
-            size: size,
-          }, item.quantity);
-        }, 100);
-      });
-    }
-  };
-  
-  const handleMultipleSizesChange = (productId: string, sizes: string[]) => {
-    const item = cartItems.find(item => item.productId === productId);
-    if (item) {
-      // Update the item with the new selected sizes
-      handleAction(() => {
-        removeFromCart(productId);
-        
-        // Add it back with the new sizes
-        setTimeout(() => {
-          addToCart({
-            ...item,
-            selectedSizes: sizes,
-          }, item.quantity);
-        }, 100);
-      });
-    }
-  };
-
+const CartItemList: React.FC<CartItemListProps> = ({ 
+  cartItems, 
+  onRemove,
+  onUpdateQuantity
+}) => {
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Cart Items ({cartItems.length})</h2>
-        <button 
-          onClick={handleClearCart}
-          className="text-red-500 flex items-center hover:text-red-600"
-        >
-          <Trash2 size={18} className="mr-1" />
-          <span className="text-sm font-medium">Clear Cart</span>
-        </button>
-      </div>
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <h2 className="text-lg font-medium mb-4">Items ({cartItems.length})</h2>
       
-      <div className="divide-y divide-gray-200">
-        {cartItems.length === 0 ? (
-          <p className="py-6 text-center text-gray-500">Your cart is empty.</p>
-        ) : (
-          cartItems.map((item) => (
-            <div key={item.productId} className="py-6 flex flex-col sm:flex-row">
-              <Link to={`/product/${item.productId}`} className="flex-shrink-0">
-                <div className="h-24 w-24 bg-gray-100 rounded-md overflow-hidden">
-                  {item.image ? (
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="h-full w-full object-cover object-center"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.svg';
-                      }}
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center bg-gray-200">
-                      <span className="text-gray-500 text-xs">No image</span>
-                    </div>
-                  )}
-                </div>
+      <div className="space-y-4">
+        {cartItems.map(item => (
+          <div key={item.id} className="flex border-b pb-4">
+            <Link to={`/product/${item.product_id}`} className="w-20 h-20 rounded-md overflow-hidden flex-shrink-0">
+              <img 
+                src={item.image || 'https://via.placeholder.com/80'}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            </Link>
+            
+            <div className="ml-4 flex-grow">
+              <Link to={`/product/${item.product_id}`} className="font-medium hover:text-blue-600">
+                {item.name}
               </Link>
               
-              <div className="flex-1 ml-0 sm:ml-6 mt-4 sm:mt-0">
-                <div className="flex justify-between">
-                  <div>
-                    <Link to={`/product/${item.productId}`} className="text-base font-medium hover:text-blue-600">
-                      {item.name}
-                    </Link>
-                    {item.color && (
-                      <p className="mt-1 text-sm text-gray-500">Color: {item.color}</p>
-                    )}
-                    
-                    {/* Enhanced Size selector with multi-select */}
-                    <div className="mt-2 max-w-[180px]">
-                      <CartItemSizeSelector 
-                        currentSize={item.size} 
-                        selectedSizes={item.selectedSizes}
-                        availableSizes={['XS', 'S', 'M', 'L', 'XL', 'XXL']}
-                        onSelectSize={(size) => handleSizeChange(item.productId, size)}
-                        onSelectMultipleSizes={(sizes) => handleMultipleSizesChange(item.productId, sizes)}
-                        allowMultiple={true}
-                      />
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleRemoveFromCart(item.productId)}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                
-                <div className="flex justify-between items-center mt-4">
-                  <div className="flex items-center border rounded-md">
-                    <button 
-                      onClick={() => decrementQuantity(item.productId)}
-                      className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <span className="px-4 py-1">{item.quantity}</span>
-                    <button 
-                      onClick={() => incrementQuantity(item.productId)}
-                      className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                  
-                  <div className="font-medium">
-                    {formatCurrency(item.price * item.quantity)}
-                  </div>
-                </div>
-                
-                <div className="mt-3 flex justify-end">
-                  <ProductPlaceOrder
-                    product={{
-                      id: item.productId,
-                      code: item.productId,
-                      name: item.name,
-                      price: item.price,
-                      image: item.image || '',
-                      description: '',
-                      originalPrice: item.price,
-                      discountPercentage: 0,
-                      rating: 0,
-                      category: '',
-                      tags: []
-                    }}
-                    size={item.size}
-                    selectedSizes={item.selectedSizes}
-                    size_btn="sm"
-                    variant="outline"
-                    className="text-sm"
-                  />
-                </div>
-              </div>
+              {item.size && (
+                <div className="text-sm text-gray-600 mt-1">Size: {item.size}</div>
+              )}
+              
+              {item.color && (
+                <div className="text-sm text-gray-600">Color: {item.color}</div>
+              )}
+              
+              <div className="text-green-600 font-medium mt-1">₹{item.price}</div>
             </div>
-          ))
-        )}
+            
+            <div className="flex flex-col items-end">
+              <div className="flex items-center border rounded-md mb-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                >
+                  <Minus size={16} />
+                </Button>
+                
+                <span className="px-2">{item.quantity}</span>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                >
+                  <Plus size={16} />
+                </Button>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                onClick={() => onRemove(item.id)}
+              >
+                <Trash2 size={16} className="mr-1" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

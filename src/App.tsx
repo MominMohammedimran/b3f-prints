@@ -48,6 +48,12 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLocations from './pages/admin/AdminLocations';
 import AdminNotFound from './pages/admin/AdminNotFound';
+import AdminUserDetails from './pages/admin/AdminUserDetails';
+
+// Add the new route for AdminUserDetails
+
+// Within the routes configuration, add this route:
+// <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
 
 import { Toaster } from "@/components/ui/toaster";
 import { ensureAdminExists } from './utils/setupInitialAdmin';
@@ -128,6 +134,7 @@ function App() {
                   <Route path="/admin/customers" element={<AdminCustomers />} />
                   <Route path="/admin/settings" element={<AdminSettings />} />
                   <Route path="/admin/locations" element={<AdminLocations />} />
+                  <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
                   <Route path="/admin/*" element={<AdminNotFound />} />
                   
                   {/* 404 Route */}
