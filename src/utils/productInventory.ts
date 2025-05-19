@@ -1,143 +1,91 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
-interface InventorySettings {
-  inventory: {
-    tshirt: Record<string, number>;
-    mug: Record<string, number>;
-    cap: Record<string, number>;
-  };
-}
-
-// Fetch product inventory
-export const getProductInventory = async () => {
-  try {
-    const { data: settings, error } = await supabase
-      .from('settings')
-      .select('settings')
-      .eq('type', 'inventory')
-      .single();
-    
-    if (error) {
-      console.error('Error fetching inventory settings:', error);
-      return {
-        tshirt: { S: 10, M: 10, L: 10, XL: 10 },
-        mug: { Standard: 10 },
-        cap: { Standard: 10 }
-      };
-    }
-    
-    // Parse settings.settings and access inventory property
-    const parsedSettings = settings?.settings as InventorySettings;
-    return parsedSettings?.inventory || {
-      tshirt: { S: 10, M: 10, L: 10, XL: 10 },
-      mug: { Standard: 10 },
-      cap: { Standard: 10 }
-    };
-  } catch (error) {
-    console.error('Error fetching inventory:', error);
-    return {
-      tshirt: { S: 10, M: 10, L: 10, XL: 10 },
-      mug: { Standard: 10 },
-      cap: { Standard: 10 }
-    };
-  }
-};
-
-// Update product inventory
+/**
+ * Update product inventory in the database
+ * @param productType The product type (tshirt, mug, cap)
+ * @param size The product size
+ * @param quantity The new quantity to set
+ * @returns Promise resolving to boolean indicating success
+ */
 export const updateProductInventory = async (
-  productType: string,
+  productType: string, 
   size: string,
   quantity: number
-) => {
+): Promise<boolean> => {
   try {
-    // Get current inventory
-    const currentInventory = await getProductInventory();
+    // Since we don't have a product_inventory table yet,
+    // we'll use the products table with category='inventory'
+    const { data, error } = await supabase
+      .from('products')
+      .update({ stock: quantity })
+      .eq('category', 'inventory')
+      .eq('name', `${productType}_${size}`);
     
-    // Update quantity
-    if (currentInventory[productType] && 
-        currentInventory[productType][size] !== undefined) {
-      currentInventory[productType][size] -= quantity;
-      
-      // Make sure it doesn't go below 0
-      if (currentInventory[productType][size] < 0) {
-        currentInventory[productType][size] = 0;
-      }
-      
-      // Save updated inventory
-      const { error } = await supabase
-        .from('settings')
-        .update({ 
-          settings: { 
-            inventory: currentInventory 
-          } 
-        })
-        .eq('type', 'inventory');
-      
-      if (error) {
-        console.error('Error updating inventory:', error);
-        throw error;
-      }
-      
-      return true;
-    } else {
-      console.error('Product type or size not found in inventory');
-      return false;
-    }
+    if (error) throw error;
+    
+    return true;
   } catch (error) {
-    console.error('Error updating inventory:', error);
-    throw error;
+    console.error('Error updating product inventory:', error);
+    toast({
+      title: 'Inventory update failed',
+      description: 'Could not update product inventory',
+      variant: 'destructive'
+    });
+    return false;
   }
 };
 
-interface OrderItem {
-  productType?: string;
-  size?: string;
-  quantity?: number;
-}
-
-// Update inventory when order is delivered
-export const updateInventoryForDeliveredOrder = async (orderId: string) => {
+/**
+ * Get the current product inventory
+ * @returns Promise with inventory data
+ */
+export const getProductInventory = async () => {
   try {
-    // Get order details
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
+    // Since we don't have a product_inventory table yet,
+    // we'll use the products table with category='inventory'
+    const { data, error } = await supabase
+      .from('products')
       .select('*')
-      .eq('id', orderId)
-      .single();
+      .eq('category', 'inventory');
     
-    if (orderError) {
-      console.error('Error fetching order:', orderError);
-      return false;
-    }
+    if (error) throw error;
     
-    // Only update inventory if order is delivered/completed
-    if (['delivered', 'completed'].includes(order?.status?.toLowerCase())) {
-      // Get order items
-      const items = order.items;
-      
-      if (Array.isArray(items)) {
-        // Process each item
-        for (const item of items) {
-          // Cast item to the appropriate type before accessing properties
-          const typedItem = item as OrderItem;
-          
-          if (typedItem.productType && typedItem.size && typedItem.quantity) {
-            await updateProductInventory(
-              typedItem.productType,
-              typedItem.size,
-              typedItem.quantity
-            );
-          }
+    // Format the inventory data
+    const inventory: Record<string, Record<string, number>> = {
+      tshirt: { S: 0, M: 0, L: 0, XL: 0 },
+      mug: { Standard: 0 },
+      cap: { Standard: 0 }
+    };
+    
+    if (data) {
+      data.forEach((item: any) => {
+        const [productType, size] = item.name.split('_');
+        if (
+          productType && 
+          inventory[productType] && 
+          size
+        ) {
+          inventory[productType][size] = item.stock || 0;
         }
-      }
-      
-      return true;
+      });
     }
     
-    return false;
+    return inventory;
   } catch (error) {
-    console.error('Error updating inventory for delivered order:', error);
-    return false;
+    console.error('Error fetching product inventory:', error);
+    toast({
+      title: 'Inventory fetch failed',
+      description: 'Could not retrieve product inventory',
+      variant: 'destructive'
+    });
+    
+    // Return default inventory in case of error
+    return {
+      tshirt: { S: 10, M: 15, L: 8, XL: 5 },
+      mug: { Standard: 20 },
+      cap: { Standard: 12 }
+    };
   }
 };

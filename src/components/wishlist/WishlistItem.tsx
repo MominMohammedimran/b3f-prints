@@ -5,21 +5,13 @@ import { Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface WishlistItemProps {
-  item: {
-    id: string;
-    product_id: string;
-    name: string;
-    price: number;
-    image?: string;
-    category?: string;
-    originalPrice?: number;
-  };
+  item: any;
   onRemove: (productId: string) => void;
   onAddToCart: (item: any) => void;
 }
 
 const WishlistItem: React.FC<WishlistItemProps> = ({ item, onRemove, onAddToCart }) => {
-  const productId = item.product_id;
+  const productId = item.product_id || item.productId || item.id;
   
   return (
     <div className="flex items-center border-b border-gray-200 py-4">
@@ -34,17 +26,7 @@ const WishlistItem: React.FC<WishlistItemProps> = ({ item, onRemove, onAddToCart
         <Link to={`/product/${productId}`} className="font-medium hover:text-blue-600">
           {item.name}
         </Link>
-        {item.category && (
-          <div className="text-sm text-gray-500">Category: {item.category}</div>
-        )}
-        <div className="flex items-center mt-1">
-          <span className="text-green-600 font-medium">₹{item.price}</span>
-          {item.originalPrice && item.originalPrice > item.price && (
-            <span className="text-sm text-gray-400 line-through ml-2">
-              ₹{item.originalPrice}
-            </span>
-          )}
-        </div>
+        <div className="text-green-600 font-medium mt-1">₹{item.price}</div>
       </div>
       
       <div className="flex space-x-2">

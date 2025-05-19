@@ -1,55 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { AdminUser } from '@/lib/types';
-
-// Check if a user is an admin
-export const isAdminUser = async (userId: string): Promise<boolean> => {
-  try {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-      
-    if (error) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
-    
-    return !!data;
-  } catch (error) {
-    console.error('Error in isAdminUser:', error);
-    return false;
-  }
-};
-
-// Handle admin login
-export const handleAdminLogin = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) throw error;
-    
-    if (data.user) {
-      const isAdmin = await isAdminUser(data.user.id);
-      if (!isAdmin) {
-        // Sign out if not an admin
-        await supabase.auth.signOut();
-        throw new Error('You do not have admin privileges');
-      }
-      return data;
-    } else {
-      throw new Error('Login failed');
-    }
-  } catch (error: any) {
-    console.error('Admin login error:', error);
-    throw error;
-  }
-};
+import { supabase } from "@/integrations/supabase/client";
+import { AdminUser } from "@/lib/types";
 
 export const DEFAULT_ADMIN_PERMISSIONS = [
   "products.create",

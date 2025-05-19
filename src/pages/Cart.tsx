@@ -1,166 +1,106 @@
 
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import Layout from '../components/layout/Layout';
-import { toast } from 'sonner';
-import { Button } from '../components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
-import { products } from '@/lib/data';
-import CartItemList from '@/components/cart/CartItemList';
-import CartSummary from '@/components/cart/CartSummary';
-import EmptyCart from '@/components/cart/EmptyCart';
+import CartItemList from '../components/cart/CartItemList';
+import CartSummary from '../components/cart/CartSummary';
+import EmptyCart from '../components/cart/EmptyCart';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { toast } from '@/components/ui/use-toast';
 
-export interface CartItem {
-  id: string;
-  product_id: string;
-  user_id: string;
-  quantity: number;
-  price: number;
-  image?: string;
-  color?: string;
-  size?: string;
-  name: string;
-  created_at?: string;
-  updated_at?: string;
-}
+const DELIVERY_FEE = 40;
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { currentUser, userProfile } = useAuth();
+  const { cartItems, totalPrice } = useCart();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
-  
+
+  // Auth check
   useEffect(() => {
-    const fetchCartItems = async () => {
-      if (!currentUser) {
-        setCartItems([]);
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('carts')
-          .select('*')
-          .eq('user_id', currentUser.id);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setCartItems(data);
-        } else {
-          setCartItems([]);
-        }
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-        toast.error('Failed to load cart items');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchCartItems();
-  }, [currentUser]);
-  
-  const calculateSubtotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
-  
-  const removeFromCart = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('carts')
-        .delete()
-        .eq('id', itemId);
-      
-      if (error) throw error;
-      
-      setCartItems(prev => prev.filter(item => item.id !== itemId));
-      toast.success('Item removed from cart');
-    } catch (error) {
-      console.error('Error removing from cart:', error);
-      toast.error('Failed to remove item');
-    }
-  };
-  
-  const updateQuantity = async (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeFromCart(itemId);
+    // If not logged in, redirect to sign in
+    if (!currentUser) {
+      navigate('/signin?redirectTo=/cart');
       return;
     }
-    
-    try {
-      const { error } = await supabase
-        .from('carts')
-        .update({ quantity: newQuantity })
-        .eq('id', itemId);
-      
-      if (error) throw error;
-      
-      setCartItems(prev => prev.map(item => 
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      ));
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast.error('Failed to update quantity');
-    }
-  };
-  
+  }, [currentUser, navigate]);
+
   const handleCheckout = () => {
     if (!currentUser) {
-      toast.error('Please sign in to checkout');
-      navigate('/signin');
+      toast.error({
+        title: 'Authentication Required', 
+        description: 'Please sign in to checkout'
+      });
+      navigate('/signin?redirectTo=/checkout');
       return;
     }
     
-    if (cartItems.length === 0) {
-      toast.error('Your cart is empty');
+    // Ensure there are items in the cart before proceeding
+    if (!cartItems || cartItems.length === 0) {
+      toast.error({
+        title: 'Empty Cart',
+        description: 'Your cart is empty'
+      });
       return;
     }
     
+    // Navigate to checkout
     navigate('/checkout');
   };
 
+  if (!currentUser) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center mb-6">
+            <Link to="/" className="mr-2">
+              <ArrowLeft size={24} className="text-blue-600 hover:text-blue-800" />
+            </Link>
+            <h1 className="text-2xl font-bold text-blue-600">Shopping Cart</h1>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <p className="mb-4">Please sign in to view your cart.</p>
+            <button 
+              onClick={() => navigate('/signin?redirectTo=/cart')}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
-        
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-            <p className="mt-2">Loading your cart...</p>
-          </div>
-        ) : cartItems.length > 0 ? (
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-2">
-              <CartItemList 
-                cartItems={cartItems} 
-                onRemove={removeFromCart}
-                onUpdateQuantity={updateQuantity}
-              />
+      <div className="container mx-auto px-4">
+        <div className="flex items-center mb-6">
+          <Link to="/" className="mr-2">
+            <ArrowLeft size={24} className="text-blue-600 hover:text-blue-800" />
+          </Link>
+          <h1 className="text-2xl font-bold text-blue-600">Shopping Cart</h1>
+        </div>
+
+        {!cartItems || cartItems.length === 0 ? (
+          <EmptyCart />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <CartItemList cartItems={cartItems} />
+              </div>
             </div>
-            
-            <div>
-              <CartSummary 
-                subtotal={calculateSubtotal()}
-                deliveryFee={50}
+
+            <div className="lg:col-span-1">
+              <CartSummary
+                subtotal={totalPrice}
+                deliveryFee={DELIVERY_FEE}
                 onCheckout={handleCheckout}
               />
-              
-              <Button
-                onClick={handleCheckout}
-                className="w-full mt-4 bg-green-600 hover:bg-green-700"
-              >
-                Proceed to Checkout
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
           </div>
-        ) : (
-          <EmptyCart />
         )}
       </div>
     </Layout>

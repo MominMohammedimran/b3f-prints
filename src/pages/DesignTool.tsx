@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -5,7 +6,7 @@ import { toast } from 'sonner';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from '../context/LocationContext';
-import { useCartFunctions } from '@/hooks/useCartFunctions';
+import { useCart } from '../context/CartContext';
 import TextModal from '../components/design/TextModal';
 import ImageModal from '../components/design/ImageModal';
 import EmojiModal from '../components/design/EmojiModal';
@@ -43,7 +44,7 @@ const DesignTool = () => {
   
   const { currentUser } = useAuth();
   const { currentLocation } = useLocation();
-  const { addToCart } = useCartFunctions();
+  const { addToCart } = useCart();
   const { sizeInventory, fetchProductInventory, updateInventory } = useProductInventory();
   
   const emojis = [

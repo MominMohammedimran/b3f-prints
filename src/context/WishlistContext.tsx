@@ -1,222 +1,289 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Product } from '@/lib/types';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
-import { products } from '@/lib/data';  // Import mock products
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Define the shape of wishlist items
-export interface WishlistItem {
-  id: string;
-  product_id: string;
-  user_id: string;
-  created_at: string;
-  name: string;
-  price: number;
-  image?: string;
-  category?: string;
-  originalPrice?: number;
-  updated_at?: string;
-}
-
-// Define the shape of the context
 interface WishlistContextType {
-  wishlistItems: WishlistItem[];
-  addToWishlist: (productId: string) => Promise<void>;
+  wishlistItems: Product[];
+  isLoading: boolean;
+  isInWishlist: (productId: string) => boolean;
+  addToWishlist: (product: Product) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
   clearWishlist: () => Promise<void>;
-  isInWishlist: (productId: string) => boolean;
-  loading: boolean;
 }
 
-// Create the context with default values
 const WishlistContext = createContext<WishlistContextType>({
   wishlistItems: [],
+  isLoading: true,
+  isInWishlist: () => false,
   addToWishlist: async () => {},
   removeFromWishlist: async () => {},
   clearWishlist: async () => {},
-  isInWishlist: () => false,
-  loading: false,
 });
 
-// Custom hook to use the wishlist context
 export const useWishlist = () => useContext(WishlistContext);
 
-// Provider component
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
-
-  // Fetch wishlist items when user changes
-  useEffect(() => {
-    const fetchWishlistItems = async () => {
-      if (!currentUser) {
-        setWishlistItems([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('wishlists')
-          .select('*')
-          .eq('user_id', currentUser.id);
-
-        if (error) throw error;
-
-        // Process the wishlist data to get complete product information
-        const enrichedItems = data.map(item => {
-          // Find the product from mock data (in a real app, you'd fetch this from your API)
-          const product = products.find(p => p.id === item.product_id);
-          
-          return {
-            ...item,
-            name: product?.name || 'Product',
-            price: product?.price || 0,
-            image: product?.image || '',
-            category: product?.category || '',
-            originalPrice: product?.originalPrice || undefined,
-          };
-        });
-
-        setWishlistItems(enrichedItems);
-      } catch (error) {
-        console.error('Error fetching wishlist:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWishlistItems();
-  }, [currentUser]);
-
-  // Add product to wishlist
-  const addToWishlist = async (productId: string) => {
+  const queryClient = useQueryClient();
+  
+  // Helper function to normalize product ID
+  const normalizeProductId = (product: Product | string): string => {
+    if (typeof product === 'string') {
+      return product;
+    }
+    
+    return product.id || product.productId || (product as any).product_id || '';
+  };
+  
+  // Function to fetch wishlist data from Supabase
+  const fetchWishlist = async (): Promise<Product[]> => {
+ 
+    
     if (!currentUser) {
-      toast.error('Please sign in to add items to your wishlist');
-      return;
+      return [];
     }
 
     try {
-      // Find the product from mock data
-      const product = products.find(p => p.id === productId);
-      
-      if (!product) {
-        toast.error('Product not found');
-        return;
-      }
-
-      // First check if the product is already in the wishlist
-      const { data: existingItems } = await supabase
+      // Query the wishlist items for the current user
+      const { data: wishlistData, error } = await supabase
         .from('wishlists')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .eq('product_id', productId)
-        .maybeSingle();
-
-      if (existingItems) {
-        toast.info('Item already in your wishlist');
-        return;
-      }
-      
-      // Add to Supabase
-      const { data, error } = await supabase
-        .from('wishlists')
-        .insert([
-          { 
-            user_id: currentUser.id, 
-            product_id: productId,
-            name: product.name,
-            price: product.price,
-            image: product.image
-          }
-        ])
-        .select();
-
-      if (error) throw error;
-
-      // Add the new item to the state
-      if (data && data[0]) {
-        setWishlistItems(prev => [...prev, {
-          ...data[0],
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          category: product.category,
-          originalPrice: product.originalPrice
-        }]);
-        toast.success('Added to wishlist');
-      }
-    } catch (error: any) {
-      console.error('Error adding to wishlist:', error);
-      toast.error(error.message || 'Failed to add to wishlist');
-    }
-  };
-
-  // Remove product from wishlist
-  const removeFromWishlist = async (productId: string) => {
-    if (!currentUser) return;
-
-    try {
-      // Find the wishlist item to delete
-      const itemToDelete = wishlistItems.find(item => item.product_id === productId);
-      if (!itemToDelete) return;
-
-      // Remove from Supabase
-      const { error } = await supabase
-        .from('wishlists')
-        .delete()
-        .eq('id', itemToDelete.id);
-
-      if (error) throw error;
-
-      // Update the state
-      setWishlistItems(prev => prev.filter(item => item.id !== itemToDelete.id));
-      toast.success('Removed from wishlist');
-    } catch (error: any) {
-      console.error('Error removing from wishlist:', error);
-      toast.error(error.message || 'Failed to remove from wishlist');
-    }
-  };
-
-  // Clear the entire wishlist
-  const clearWishlist = async () => {
-    if (!currentUser || wishlistItems.length === 0) return;
-
-    try {
-      // Remove all items from Supabase
-      const { error } = await supabase
-        .from('wishlists')
-        .delete()
+        .select('product_id, name, price, image, description')
         .eq('user_id', currentUser.id);
 
-      if (error) throw error;
-
-      // Clear the state
-      setWishlistItems([]);
-      toast.success('Wishlist cleared');
-    } catch (error: any) {
-      console.error('Error clearing wishlist:', error);
-      toast.error(error.message || 'Failed to clear wishlist');
+      if (error) {
+      
+        throw error;
+      }
+      
+      // If we have wishlist items, construct Product objects
+      if (wishlistData && wishlistData.length > 0) {
+        const items: Product[] = wishlistData.map((item: any) => ({
+          id: item.product_id,
+          code: item.product_id, 
+          name: item.name || `Product ${item.product_id.substring(0, 5)}`,
+          price: parseFloat(item.price) || 99.99,
+          originalPrice: parseFloat(item.price) || 99.99,
+          image: item.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500',
+          description: item.description || 'A great product for your needs.',
+          category: 'General',
+          rating: 4.5,
+          discountPercentage: 0,
+          tags: ['featured'], 
+        }));
+        
+        return items;
+      }
+      
+      return [];
+    } catch (error) {
+      
+      return [];
     }
   };
-
+  
+  // Use React Query for wishlist data
+  const { data: wishlistData, isLoading: isQueryLoading } = useQuery({
+    queryKey: ['wishlist', currentUser?.id],
+    queryFn: fetchWishlist,
+    staleTime: 1000 * 60, // 1 minute - shorter stale time for more frequent refreshes
+    enabled: !!currentUser, // Only run if user is logged in
+  });
+  
+  // Update wishlistItems state when query data changes
+  useEffect(() => {
+    if (wishlistData) {
+      setWishlistItems(wishlistData);
+    }
+    setIsLoading(isQueryLoading);
+  }, [wishlistData, isQueryLoading]);
+  
   // Check if a product is in the wishlist
-  const isInWishlist = (productId: string) => {
-    return wishlistItems.some(item => item.product_id === productId);
+  const isInWishlist = (productId: string): boolean => {
+    const normalizedId = normalizeProductId(productId);
+    const result = wishlistItems.some(item => normalizeProductId(item) === normalizedId);
+    return result;
   };
-
+  
+  // Save wishlist mutation
+  const saveWishlist = useMutation({
+    mutationFn: async (action: { type: 'add' | 'remove' | 'clear', product?: Product, productId?: string }) => {
+      if (!currentUser) return;
+      
+      try {
+         
+        if (action.type === 'add' && action.product) {
+          const productId = normalizeProductId(action.product);
+          
+          // Add to database with product details
+          const { error } = await supabase
+            .from('wishlists')
+            .insert({
+              user_id: currentUser.id,
+              product_id: productId,
+              name: action.product.name,
+              price: action.product.price,
+              image: action.product.image || '',
+              description: action.product.description || '',
+            });
+          
+          if (error) throw error;
+        } 
+        else if (action.type === 'remove' && action.productId) {
+          // Remove from database
+          const { error } = await supabase
+            .from('wishlists')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('product_id', action.productId);
+          
+          if (error) throw error;
+        }
+        else if (action.type === 'clear') {
+          // Delete all wishlist items for the user
+          const { error } = await supabase
+            .from('wishlists')
+            .delete()
+            .eq('user_id', currentUser.id);
+          
+          if (error) throw error;
+        }
+        
+        // Refresh wishlist data
+        queryClient.invalidateQueries({ queryKey: ['wishlist', currentUser.id] });
+      } catch (error) {
+        console.error('Wishlist save error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist', currentUser?.id] });
+    },
+    onError: (error) => {
+        }
+  });
+  
+  // Add a product to the wishlist
+  const addToWishlist = async (product: Product): Promise<void> => {
+    if (!currentUser) {
+      toast.error('Please sign in to add items to wishlist');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const productId = normalizeProductId(product);
+      
+      if (!productId) {
+        throw new Error("Product ID is undefined");
+      }
+      
+      if (isInWishlist(productId)) {
+         setIsLoading(false);
+        return; // Product already in wishlist
+      }
+      
+     
+      // Add to Supabase
+      await saveWishlist.mutateAsync({ type: 'add', product });
+      
+      // Update local state immediately for better UX
+      const newItem: Product = {
+        id: productId,
+        code: product.code || productId,
+        name: product.name,
+        price: product.price,
+        image: product.image || '',
+        description: product.description || '',
+        originalPrice: product.originalPrice || product.price,
+        discountPercentage: product.discountPercentage || 0,
+        rating: product.rating || 0,
+        category: product.category || '',
+        tags: Array.isArray(product.tags) ? product.tags : ['featured']
+      };
+      
+      setWishlistItems(prev => [...prev, newItem]);
+      toast.success('Added to wishlist');
+    } catch (error) {
+      toast.error('Failed to add item to wishlist');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Remove a product from the wishlist
+  const removeFromWishlist = async (productId: string): Promise<void> => {
+    if (!currentUser) {
+      toast.error('Please sign in to manage your wishlist');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const normalizedId = normalizeProductId(productId);
+      
+      console.log('Removing from wishlist:', normalizedId);
+      
+      // Remove from Supabase
+      await saveWishlist.mutateAsync({ type: 'remove', productId: normalizedId });
+      
+      // Update local state to immediately reflect change
+      setWishlistItems(prev => 
+        prev.filter(item => normalizeProductId(item) !== normalizedId)
+      );
+      
+      toast.success('Removed from wishlist');
+    } catch (error) {
+      console.error('Failed to remove item from wishlist:', error);
+      toast.error('Failed to remove item from wishlist');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Clear the entire wishlist
+  const clearWishlist = async (): Promise<void> => {
+    if (!currentUser) {
+      toast.error('Please sign in to manage your wishlist');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      console.log('Clearing entire wishlist');
+      
+      // Clear in Supabase
+      await saveWishlist.mutateAsync({ type: 'clear' });
+      
+      // Update local state
+      setWishlistItems([]);
+      
+      toast.success('Wishlist cleared');
+    } catch (error) {
+      console.error('Failed to clear wishlist:', error);
+      toast.error('Failed to clear wishlist');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <WishlistContext.Provider value={{
-      wishlistItems,
-      addToWishlist,
-      removeFromWishlist,
-      clearWishlist,
-      isInWishlist,
-      loading
-    }}>
+    <WishlistContext.Provider 
+      value={{
+        wishlistItems,
+        isLoading,
+        isInWishlist,
+        addToWishlist,
+        removeFromWishlist,
+        clearWishlist
+      }}
+    >
       {children}
     </WishlistContext.Provider>
   );

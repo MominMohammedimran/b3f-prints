@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
@@ -49,9 +48,8 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLocations from './pages/admin/AdminLocations';
 import AdminNotFound from './pages/admin/AdminNotFound';
-import AdminUserDetails from './pages/admin/AdminUserDetails';
 
-import { Toaster } from 'sonner';
+import { Toaster } from "@/components/ui/toaster";
 import { ensureAdminExists } from './utils/setupInitialAdmin';
 
 // Create React Query client
@@ -87,56 +85,57 @@ function App() {
       <AuthProvider>
         <LocationProvider>
           <MicroservicesProvider>
-            <CartProvider>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/product/:productId" element={<ProductDetails />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/payment" element={<Payment />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/track-order/:orderId" element={<TrackOrder />} />
-                <Route path="/order-complete/:orderId" element={<OrderComplete />} />
-                <Route path="/profile" element={<Account/>} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/search" element={<Search />} />
-                
-                <Route path="/design-tool" element={<DesignTool />} />
-                <Route path="/about-us" element={<AboutUs />} />
-                <Route path="/contact-us" element={<ContactUs />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/product/details/:productId" element={<ProductDetails />} />
-                <Route path="/products/:category" element={<ProductPage />} />
-                
-                {/* Legal Pages */}
-                <Route path="/terms-conditions" element={<TermsConditions />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/shipping-delivery" element={<ShippingDelivery />} />
-                <Route path="/cancellation-refund" element={<CancellationRefund />} />
-                
-                {/* Admin Routes */}
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/admin" element={<AdminLogin />} />
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/products" element={<AdminProducts />} />
-                <Route path="/admin/orders" element={<AdminOrders />} />
-                <Route path="/admin/orders/:orderId" element={<AdminOrderView />} />
-                <Route path="/admin/profiles" element={<AdminProfiles />} />
-                <Route path="/admin/customers" element={<AdminCustomers />} />
-                <Route path="/admin/settings" element={<AdminSettings />} />
-                <Route path="/admin/locations" element={<AdminLocations />} />
-                <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
-                <Route path="/admin/*" element={<AdminNotFound />} />
-                
-                {/* 404 Route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster position="top-right" />
-            </CartProvider>
+        
+              <CartProvider>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/product/:productId" element={<ProductDetails />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/payment" element={<Payment />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/track-order/:orderId" element={<TrackOrder />} />
+                  <Route path="/order-complete/:orderId" element={<OrderComplete />} />
+                  <Route path="/profile" element={<Account/>} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/search" element={<Search />} />
+                  
+                  <Route path="/design-tool" element={<DesignTool />} />
+                  <Route path="/about-us" element={<AboutUs />} />
+                  <Route path="/contact-us" element={<ContactUs />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/product/details/:productId" element={<ProductDetails />} />
+                  <Route path="/products/:category" element={<ProductPage />} />
+                  
+                  {/* Legal Pages */}
+                  <Route path="/terms-conditions" element={<TermsConditions />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/shipping-delivery" element={<ShippingDelivery />} />
+                  <Route path="/cancellation-refund" element={<CancellationRefund />} />
+                  
+                  {/* Admin Routes */}
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin/products" element={<AdminProducts />} />
+                  <Route path="/admin/orders" element={<AdminOrders />} />
+                  <Route path="/admin/orders/:orderId" element={<AdminOrderView />} />
+                  <Route path="/admin/profiles" element={<AdminProfiles />} />
+                  <Route path="/admin/customers" element={<AdminCustomers />} />
+                  <Route path="/admin/settings" element={<AdminSettings />} />
+                  <Route path="/admin/locations" element={<AdminLocations />} />
+                  <Route path="/admin/*" element={<AdminNotFound />} />
+                  
+                  {/* 404 Route */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+               
+              </CartProvider>
+            
           </MicroservicesProvider>
         </LocationProvider>
       </AuthProvider>

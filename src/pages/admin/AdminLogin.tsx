@@ -50,8 +50,8 @@ const AdminLogin = () => {
           const { data, error: adminError } = await supabase
             .from('admin_users')
             .select('*')
-            .eq('email', currentUser.email)
-            .maybeSingle();
+            .eq('id', currentUser.id)
+            .single();
 
           if (adminError) {
             console.error('Error fetching admin data:', adminError);
@@ -92,112 +92,6 @@ const AdminLogin = () => {
     setError(null);
 
     try {
-      // Add hardcoded admin credentials check for demo purposes
-      if (email === 'b3fprintingsolutions@gmail.com' && password === 'Mmdimran@1') {
-        // First sign in user 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: password,
-        });
-
-        if (error) {
-          // If error, try to sign up with this credential
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-              data: { is_admin: true }
-            }
-          });
-          
-          if (signUpError) {
-            setError(signUpError.message);
-            toast.error(signUpError.message);
-            setLoading(false);
-            return;
-          }
-          
-          // Continue with newly created user
-          if (signUpData.user) {
-            // Create admin record
-            const { error: adminError } = await supabase
-              .from('admin_users')
-              .insert({ 
-                email: email,
-                user_id: signUpData.user.id,
-                role: 'admin',
-                created_at: new Date().toISOString(),
-                permissions: DEFAULT_ADMIN_PERMISSIONS
-              });
-              
-            if (adminError) {
-              console.error("Error creating admin record:", adminError);
-            }
-            
-            setAdmin({
-              id: signUpData.user.id,
-              email: email,
-              role: 'admin',
-              created_at: new Date().toISOString(),
-              user_id: signUpData.user.id,
-              permissions: DEFAULT_ADMIN_PERMISSIONS
-            });
-            
-            toast.success('Admin account created and logged in successfully');
-            navigate('/admin/dashboard');
-            return;
-          }
-        }
-
-        // Get user ID from authentication result
-        const userId = data?.user?.id;
-        
-        if (!userId) {
-          throw new Error('Authentication successful but user ID is missing');
-        }
-
-        // Check if user's email is in admin_users table
-        const { data: adminData, error: adminError } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-
-        // If no admin record exists, create one
-        if (adminError || !adminData) {
-          // Create admin record
-          const { error: createError } = await supabase
-            .from('admin_users')
-            .insert({ 
-              email: email,
-              user_id: userId,
-              role: 'admin',
-              created_at: new Date().toISOString(),
-              permissions: DEFAULT_ADMIN_PERMISSIONS
-            });
-            
-          if (createError) {
-            console.error("Error creating admin record:", createError);
-            // Continue anyway - the login should work even if record creation fails
-          }
-        }
-
-        // Create the admin user object
-        setAdmin({
-          id: userId,
-          email: email,
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          user_id: userId,
-          permissions: DEFAULT_ADMIN_PERMISSIONS || []
-        });
-        
-        toast.success('Admin login successful');
-        navigate('/admin/dashboard');
-        return;
-      }
-
-      // Normal authentication flow for non-hardcoded credentials
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,

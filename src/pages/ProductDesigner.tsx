@@ -19,13 +19,6 @@ const ProductDesigner = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('tshirt');
   
-  // Define products for the selector
-  const products = {
-    tshirt: { name: 'T-shirt', price: 200, image: '/lovable-uploads/design-tool-page/tshirt-print.png' },
-    mug: { name: 'Mug', price: 200, image: '/lovable-uploads/design-tool-page/mug-print.png' },
-    cap: { name: 'Cap', price: 150, image: '/lovable-uploads/design-tool-page/cap-print.png' }
-  };
-  
   // Sample product for the Place Order button
   const sampleProduct: Product = {
     id: "custom-design-product",
@@ -71,12 +64,6 @@ const ProductDesigner = () => {
     setSelectedSize(size);
   };
   
-  // Function for product selection that can be passed to ProductSelector
-  const handleProductSelect = (productId: string) => {
-    setSelectedProduct(productId);
-    setSelectedSize(''); // Reset size when product changes
-  };
-  
   const handlePlaceOrder = () => {
     if (!selectedSize) {
       toast.error('Please select a size before placing your order');
@@ -116,10 +103,6 @@ const ProductDesigner = () => {
           </div>
           
           <ProductSelector 
-            products={products}
-            activeProduct={selectedProduct}
-            isDualSided={false}
-            onProductSelect={handleProductSelect}
             onProductChange={handleProductChange}
             onSizeChange={handleSizeChange}
             selectedProduct={selectedProduct}

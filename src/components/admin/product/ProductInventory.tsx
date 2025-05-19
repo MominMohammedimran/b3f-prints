@@ -7,8 +7,7 @@ import { Loader2, Save, RefreshCw } from 'lucide-react';
 import { useProductInventory } from '@/hooks/useProductInventory';
 
 const ProductInventory = () => {
-  const { sizeInventory, fetchProductInventory, updateInventory } = useProductInventory();
-  const [loading, setLoading] = React.useState(false);
+  const { inventory, loading, updateQuantity, refreshInventory } = useProductInventory();
   const [updatingItem, setUpdatingItem] = React.useState<string | null>(null);
   
   const handleQuantityChange = (productType: string, size: string, value: string) => {
@@ -20,7 +19,7 @@ const ProductInventory = () => {
     const itemKey = `${productType}_${size}`;
     try {
       setUpdatingItem(itemKey);
-      const success = await updateInventory(productType, size, quantity);
+      const success = await updateQuantity(productType, size, quantity);
       
       if (success) {
         console.log(`Updated ${productType} ${size} inventory to ${quantity}`);
@@ -30,12 +29,6 @@ const ProductInventory = () => {
     } finally {
       setUpdatingItem(null);
     }
-  };
-  
-  const refreshInventory = async () => {
-    setLoading(true);
-    await fetchProductInventory();
-    setLoading(false);
   };
   
   if (loading) {
@@ -68,13 +61,13 @@ const ProductInventory = () => {
         <div>
           <h3 className="text-lg font-medium mb-3">T-shirts</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(sizeInventory.tshirt || {}).map(([size, quantity]) => (
+            {Object.entries(inventory.tshirt).map(([size, quantity]) => (
               <div key={`tshirt-${size}`} className="flex items-center space-x-2">
                 <div className="w-12 text-sm font-medium">{size}</div>
                 <Input
                   type="number"
                   min="0"
-                  value={quantity.toString()}
+                  value={quantity}
                   onChange={(e) => handleQuantityChange('tshirt', size, e.target.value)}
                   className="w-24"
                 />
@@ -95,13 +88,13 @@ const ProductInventory = () => {
         <div>
           <h3 className="text-lg font-medium mb-3">Mugs</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(sizeInventory.mug || {}).map(([size, quantity]) => (
+            {Object.entries(inventory.mug).map(([size, quantity]) => (
               <div key={`mug-${size}`} className="flex items-center space-x-2">
                 <div className="w-12 text-sm font-medium">{size}</div>
                 <Input
                   type="number"
                   min="0"
-                  value={quantity.toString()}
+                  value={quantity}
                   onChange={(e) => handleQuantityChange('mug', size, e.target.value)}
                   className="w-24"
                 />
@@ -122,13 +115,13 @@ const ProductInventory = () => {
         <div>
           <h3 className="text-lg font-medium mb-3">Caps</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(sizeInventory.cap || {}).map(([size, quantity]) => (
+            {Object.entries(inventory.cap).map(([size, quantity]) => (
               <div key={`cap-${size}`} className="flex items-center space-x-2">
                 <div className="w-12 text-sm font-medium">{size}</div>
                 <Input
                   type="number"
                   min="0"
-                  value={quantity.toString()}
+                  value={quantity}
                   onChange={(e) => handleQuantityChange('cap', size, e.target.value)}
                   className="w-24"
                 />

@@ -19,9 +19,9 @@ export const generateOrderId = (): string => {
 export const formatOrderDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric'
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 };
 
@@ -43,11 +43,11 @@ export const formatAddress = (address: ShippingAddress | undefined): string => {
   if (!address) return 'No shipping address';
   
   const parts = [
-    address.fullName || address.name,
-    address.addressLine1 || address.street,
+    address.name,
+    address.street,
     address.city,
     address.state,
-    address.postalCode || address.zipcode || address.zipCode,
+    address.zipcode || address.zipCode,
     address.country,
   ].filter(Boolean);
   
@@ -85,37 +85,4 @@ export const getOrderStatusMessage = (status: string): string => {
     default:
       return 'Order received.';
   }
-};
-
-/**
- * Calculate order total including items and delivery fee
- */
-export const calculateOrderTotal = (order: Order): number => {
-  let itemsTotal = 0;
-  
-  if (order.items && Array.isArray(order.items)) {
-    itemsTotal = order.items.reduce((sum, item) => {
-      return sum + (item.price * item.quantity);
-    }, 0);
-  }
-  
-  const deliveryFee = order.delivery_fee || order.deliveryFee || 0;
-  return itemsTotal + deliveryFee;
-};
-
-/**
- * Format the shipping address as a string
- */
-export const formatShippingAddress = (address: ShippingAddress | null | undefined): string => {
-  if (!address) return 'No address provided';
-  
-  // Handle both property naming conventions
-  const fullName = address.fullName || address.name || '';
-  const addressLine = address.addressLine1 || address.street || '';
-  const city = address.city || '';
-  const state = address.state || '';
-  const postalCode = address.postalCode || address.zipCode || address.zipcode || '';
-  const country = address.country || 'India';
-  
-  return `${fullName}\n${addressLine}\n${city}, ${state} ${postalCode}\n${country}`;
 };

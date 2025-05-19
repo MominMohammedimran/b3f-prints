@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Layout from '../layout/Layout';
 import { Product } from '../../lib/types';
 import { products } from '../../lib/data';
 import ProductDetailsContent from './details/ProductDetailsContent';
-import { toast } from 'sonner';
 
 const ProductDetailsPage = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -42,45 +41,16 @@ const ProductDetailsPage = () => {
     }
   }, [productId, navigate]);
 
-  const handleShareProduct = () => {
-    // Create the URL to share
-    const shareUrl = window.location.href;
-    
-    // Use the Web Share API if available
-    if (navigator.share) {
-      navigator.share({
-        title: product?.name || 'Check out this product',
-        text: product?.description || 'I found this amazing product!',
-        url: shareUrl,
-      })
-      .then(() => toast.success('Shared successfully'))
-      .catch((error) => console.error('Error sharing:', error));
-    } else {
-      // Fallback to clipboard if Web Share API is not available
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => toast.success('Link copied to clipboard'))
-        .catch(() => toast.error('Failed to copy link'));
-    }
-  };
-
   return (
     <Layout>
       <div className="container-custom">
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center">
-            <Link to="/" className="mr-2">
-              <ArrowLeft size={24} className="back-arrow" />
-            </Link>
-            <h1 className="text-2xl font-bold text-green-600">{product?.name || 'Product Details'}</h1>
-          </div>
+        <div className="flex items-center mb-4 mt-4">
+          <Link to="/" className="mr-2">
+            <ArrowLeft size={24} className="back-arrow" />
+          </Link>
+          <h1 className="text-2xl font-bold text-green-600">{product?.name || 'Product Details'}</h1>
           
-          <button 
-            className="flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
-            onClick={handleShareProduct}
-          >
-            <Share2 size={18} className="mr-1" />
-            Share
-          </button>
+          
         </div>
 
         {product ? (
