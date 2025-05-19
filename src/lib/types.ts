@@ -159,10 +159,13 @@ export interface Location {
   code: string;
 }
 
-// Add AdminUser interface
+// Update AdminUser interface with all required properties
 export interface AdminUser {
   id: string;
   email: string;
+  role?: string; // Add role property
   created_at?: string;
   updated_at?: string;
+  user_id?: string; // Add user_id property
+  permissions?: string[]; // Add permissions property
 }
