@@ -163,9 +163,9 @@ export interface Location {
 export interface AdminUser {
   id: string;
   email: string;
-  role?: string; // Add role property
+  role?: string;
   created_at?: string;
   updated_at?: string;
-  user_id?: string; // Add user_id property
-  permissions?: string[]; // Add permissions property
+  user_id?: string;
+  permissions?: string[];
 }

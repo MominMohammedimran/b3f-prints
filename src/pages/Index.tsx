@@ -1,16 +1,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import ProductCard from '../components/ui/ProductCard';
 import CategoryItem from '../components/ui/CategoryItem';
 import Banner from '../components/ui/Banner';
 import { ScrollArea } from '../components/ui/scroll-area';
+import LocationPopup from '../components/ui/LocationPopup';
 import { products, categories } from '../lib/data';
 import { Product } from '../lib/types';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useLocation } from '../context/LocationContext';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ const Index = () => {
   const { currentLocation } = useLocation();
   const [visibleCategories, setVisibleCategories] = useState<number>(4);
   const [startIndex, setStartIndex] = useState(0);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
   const categoriesRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -65,9 +68,11 @@ const Index = () => {
   ];
 
   return (
-    <Layout >
+    <Layout>
+      {showLocationPopup && <LocationPopup onClose={() => setShowLocationPopup(false)} />}
+      
       <div className="container-custom">
-        <div className="mt-8 mb-6 animate-fade-in" >
+        <div className="mt-8 mb-6 animate-fade-in">
           <ScrollArea className="w-full">
             <Banner images={bannerImages} />
           </ScrollArea>
@@ -75,7 +80,7 @@ const Index = () => {
         
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl md:text-2xl font-bold">Hero Categories</h2>
+            <h2 className="text-xl md:text-2xl font-bold">Categories</h2>
             <div className="flex space-x-2">
               <button 
                 onClick={handlePrevCategory}
@@ -105,7 +110,7 @@ const Index = () => {
                 style={{ width: 'max-content', scrollSnapType: 'x mandatory' }}
               >
                 {categories.slice(startIndex, startIndex + visibleCategories).map(category => (
-                  <div key={category.id} className="w-[100px] sm:w-[180px] md:w-[220px] lg:w-[250px]  flex-shrink-0 scroll-snap-align-start">
+                  <div key={category.id} className="w-[100px] sm:w-[180px] md:w-[220px] lg:w-[250px] flex-shrink-0 scroll-snap-align-start">
                     <CategoryItem category={category} /> 
                   </div>
                 ))}
@@ -113,9 +118,9 @@ const Index = () => {
             </div>
           </div>
         </div>
-        <h2 className="text-xl md:text-2xl font-bold mb-5 text-left">Hero Products</h2>
+        
+        <h2 className="text-xl md:text-2xl font-bold mb-5 text-left">Featured Products</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
-          
           {products.map((product, index) => (
             <div key={product.id} className={`animate-fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
               <ProductCard 

@@ -1,6 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+interface InventorySettings {
+  inventory: {
+    tshirt: Record<string, number>;
+    mug: Record<string, number>;
+    cap: Record<string, number>;
+  };
+}
+
 // Fetch product inventory
 export const getProductInventory = async () => {
   try {
@@ -19,8 +27,9 @@ export const getProductInventory = async () => {
       };
     }
     
-    // Cast settings.settings to the correct type and access inventory property
-    return (settings?.settings as any)?.inventory || {
+    // Parse settings.settings and access inventory property
+    const parsedSettings = settings?.settings as InventorySettings;
+    return parsedSettings?.inventory || {
       tshirt: { S: 10, M: 10, L: 10, XL: 10 },
       mug: { Standard: 10 },
       cap: { Standard: 10 }
@@ -81,6 +90,12 @@ export const updateProductInventory = async (
   }
 };
 
+interface OrderItem {
+  productType?: string;
+  size?: string;
+  quantity?: number;
+}
+
 // Update inventory when order is delivered
 export const updateInventoryForDeliveredOrder = async (orderId: string) => {
   try {
@@ -105,7 +120,7 @@ export const updateInventoryForDeliveredOrder = async (orderId: string) => {
         // Process each item
         for (const item of items) {
           // Cast item to the appropriate type before accessing properties
-          const typedItem = item as { productType?: string; size?: string; quantity?: number };
+          const typedItem = item as OrderItem;
           
           if (typedItem.productType && typedItem.size && typedItem.quantity) {
             await updateProductInventory(

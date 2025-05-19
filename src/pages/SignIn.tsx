@@ -26,11 +26,15 @@ const SignIn = () => {
   useEffect(() => {
     if (currentUser && !loading) {
       const redirectTo = new URLSearchParams(location.search).get('redirectTo');
+      // Check for admin route to properly redirect
+      if (location.pathname.includes('admin')) {
+        navigate('/admin/dashboard');
+        return;
+      }
+      
       // Use setTimeout to ensure the redirect happens after render
-      setTimeout(() => {
-        navigate(redirectTo || '/');
-        toast.success('Successfully signed in!');
-      }, 100);
+      navigate(redirectTo || '/');
+      toast.success('Successfully signed in!');
     }
   }, [currentUser, loading, navigate, location]);
 

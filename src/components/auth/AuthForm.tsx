@@ -1,303 +1,256 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/context/AuthContext';
-import { EyeIcon, EyeOffIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import PasswordStrengthIndicator from './PasswordStrengthIndicator';
-import OTPValidation from './OTPValidation';
-import { checkPasswordStrength } from '@/utils/securityUtils';
 
-type AuthMode = 'signin' | 'signup' | 'otp';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import VerificationForm from './VerificationForm';
+
+// Form schemas
+const signInSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
+
+const signUpSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  firstName: z.string().min(2, { message: 'First name is required' }),
+  lastName: z.string().min(2, { message: 'Last name is required' }),
+});
+
+type SignInFormValues = z.infer<typeof signInSchema>;
+type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 interface AuthFormProps {
-  initialMode?: AuthMode;
+  initialMode: 'signin' | 'signup';
   redirectTo?: string;
 }
 
-export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormProps) {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'signin', redirectTo = '/' }) => {
+  const [mode, setMode] = useState<'signin' | 'signup' | 'verify'>(initialMode);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState<{ firstName: string; lastName: string } | null>(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
+  
+  // Sign in form
+  const signInForm = useForm<SignInFormValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+  
+  // Sign up form
+  const signUpForm = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+    },
+  });
+  
+  const handleSignIn = async (values: SignInFormValues) => {
+    setIsSubmitting(true);
     try {
-      if (mode === 'signin') {
-        const { data, error } = await signIn(email, password);
-        if (error) {
-          console.error("Sign-in failed:", error.message);
-          toast.error(error.message || 'Sign in failed');
-          await handleSendOTP();
-        } else {
-          toast.success('Sign in successful!');
-          navigate(redirectTo);
-        }
-      } else if (mode === 'signup') {
-        if (password !== confirmPassword) {
-          toast.error('Passwords do not match');
-          setLoading(false);
-          return;
-        }
-        
-        const strengthResult = checkPasswordStrength(password);
-        if (strengthResult.strength === 'weak') {
-          toast.error(strengthResult.message);
-          setLoading(false);
-          return;
-        }
-        
-        const { data, error } = await signUp(email, password);
-        if (error) {
-          toast.error(error.message || 'Sign up failed');
-        } else {
-          toast.success('Account created! Verification email sent.');
-          await handleSendOTP();
-        }
-      }
-    } catch (error: any) {
-      console.error('Authentication error:', error);
-      toast.error(error.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendOTP = async () => {
-    if (!email) {
-      toast.error('Please enter your email');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { error } = await sendOtpToEmail(email);
-      if (error) {
-        throw error;
-      } else {
-        toast.success('Verification code sent to your email');
-        setMode('otp');
-      }
-    } catch (error: any) {
-      console.error('Failed to send OTP:', error);
-      toast.error(error.message || 'Failed to send verification code');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendOtpToEmail = async (email: string) => {
-    console.log('Sending OTP to email:', email);
-    
-    try {
-      const testToken = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log(`Development test token for ${email}: ${testToken}`);
+      const { error } = await signIn(values.email, values.password);
       
-      return await supabase.auth.signInWithOtp({
-        email,
-      });
-    } catch (error) {
-      console.error('Error in sendOtpToEmail:', error);
-      throw error;
-    }
-  };
-
-  const verifyOtpWithEmail = async (token: string) => {
-    console.log('Verifying OTP for email:', email);
-    try {
-      return await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email'
-      });
-    } catch (error) {
-      console.error('Error in verifyOtpWithEmail:', error);
-      throw error;
+      if (error) {
+        console.error('Sign in error:', error);
+        toast.error(error.message || 'Failed to sign in');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      toast.success('Signed in successfully');
+      navigate(redirectTo || '/');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      toast.error(error.message || 'Failed to sign in');
+      setIsSubmitting(false);
     }
   };
   
-  const handleVerifyOtp = async (token: string) => {
-    setLoading(true);
+  const handleSignUp = async (values: SignUpFormValues) => {
+    setIsSubmitting(true);
     try {
-      console.log(`Attempting to verify OTP for ${email} with token: ${token}`);
-      const { error } = await verifyOtpWithEmail(token);
+      // Store user data for verification step
+      setUserData({
+        firstName: values.firstName,
+        lastName: values.lastName,
+      });
+      setUserEmail(values.email);
+      setUserPassword(values.password);
+      
+      // Attempt to sign up (this will be handled by the verification step)
+      const { error } = await signUp(values.email, values.password);
+      
       if (error) {
-        throw error;
-      } else {
-        toast.success('Verification successful!');
-        navigate(redirectTo);
+        console.error('Sign up error:', error);
+        toast.error(error.message || 'Failed to sign up');
+        setIsSubmitting(false);
+        return;
       }
+      
+      // Switch to verification mode
+      setMode('verify');
+      setIsSubmitting(false);
     } catch (error: any) {
-      console.error('OTP verification error:', error);
-      toast.error(error.message || 'Invalid verification code');
-    } finally {
-      setLoading(false);
+      console.error('Sign up error:', error);
+      toast.error(error.message || 'Failed to sign up');
+      setIsSubmitting(false);
     }
   };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  
+  const handleBackToSignUp = () => {
+    setMode('signup');
   };
-
-  if (mode === 'otp') {
+  
+  if (mode === 'verify') {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle>Verify Email</CardTitle>
-          <CardDescription>
-            Enter the verification code sent to your email
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <OTPValidation
-            email={email}
-            onVerify={handleVerifyOtp}
-            onResend={handleSendOTP}
-            onBack={() => setMode('signin')}
-          />
-        </CardContent>
-      </Card>
+      <VerificationForm 
+        userEmail={userEmail}
+        userPassword={userPassword}
+        userData={userData}
+        onBack={handleBackToSignUp}
+      />
     );
   }
-
+  
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>{mode === 'signin' ? 'Sign In' : 'Create Account'}</CardTitle>
-        <CardDescription>
-          {mode === 'signin' ? 'Enter your credentials to sign in' : 'Create a new account'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="password">Password</Label>
-              {mode === 'signin' && (
-                <a 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSendOTP();
-                  }}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Sign in with OTP instead
-                </a>
+    <div>
+      {mode === 'signin' ? (
+        <Form {...signInForm}>
+          <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
+            <FormField
+              control={signInForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Your email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              />
-              <Button
+            />
+            
+            <FormField
+              control={signInForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Your password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
+            </Button>
+            
+            <div className="text-center">
+              <Button 
+                variant="link" 
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={togglePasswordVisibility}
+                onClick={() => navigate('/reset-password')}
               >
-                {showPassword ? (
-                  <EyeOffIcon className="h-4 w-4" />
-                ) : (
-                  <EyeIcon className="h-4 w-4" />
-                )}
+                Forgot Password?
               </Button>
             </div>
-            {mode === 'signup' && password && (
-              <PasswordStrengthIndicator password={password} />
-            )}
-          </div>
-          
-          {mode === 'signup' && (
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
+          </form>
+        </Form>
+      ) : (
+        <Form {...signUpForm}>
+          <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={signUpForm.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={signUpForm.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          )}
-          
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
-          </Button>
-          
-          <div className="text-center">
-            {mode === 'signin' ? (
-              <p className="text-sm text-gray-500">
-                Don't have an account?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode('signup');
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Create one
-                </a>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Already have an account?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode('signin');
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Sign in
-                </a>
-              </p>
-            )}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            
+            <FormField
+              control={signUpForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Your email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={signUpForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Create a password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing Up...' : 'Create Account'}
+            </Button>
+          </form>
+        </Form>
+      )}
+    </div>
   );
-}
+};

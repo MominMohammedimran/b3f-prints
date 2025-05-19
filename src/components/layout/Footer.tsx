@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, Instagram, Facebook, FileText, Truck, Package } from 'lucide-react';
+import { Phone, Mail, MapPin, Instagram, Facebook, FileText, Truck, Package, Home, ShoppingCart, Info, User } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -26,6 +26,26 @@ const Footer = () => {
           </div>
         </div>
         
+        {/* Navigation Icons */}
+        <div className="grid grid-cols-4 gap-4 mb-8 sm:hidden">
+          <Link to="/" className="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <Home className="w-5 h-5 mb-1" />
+            <span className="text-xs">Home</span>
+          </Link>
+          <Link to="/products" className="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <ShoppingCart className="w-5 h-5 mb-1" />
+            <span className="text-xs">Products</span>
+          </Link>
+          <Link to="/about" className="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <Info className="w-5 h-5 mb-1" />
+            <span className="text-xs">About</span>
+          </Link>
+          <Link to="/profile" className="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <User className="w-5 h-5 mb-1" />
+            <span className="text-xs">Account</span>
+          </Link>
+        </div>
+        
         {/* Legal Pages Links */}
         <div className="mb-6 grid grid-cols-2 gap-3">
           <Link to="/privacy-policy" className="text-sm flex items-center hover:text-blue-600 transition-colors">
@@ -45,42 +65,6 @@ const Footer = () => {
             <span>Shipping & Delivery</span>
           </Link>
         </div>
-        
-      {/* Features 
-        <div className="grid grid-cols-2 gap-2 text-sm mb-6">
-          <div className="flex items-center gap-1">
-            <span>📱</span>
-            <p>Order Notifications</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>🎫</span>
-            <p>Coupons & Promo Codes</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>👛</span>
-            <p>Wallet System</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>🌟</span>
-            <p>Reward Points System</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>🔍</span>
-            <p>SEO-Optimized Website</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>🚫</span>
-            <p>Content Copy Protection</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>🛡️</span>
-            <p>Free Security Tools</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>📈</span>
-            <p>Google Search Console</p>
-          </div>
-        </div> */}
         
         {/* WhatsApp Community Join */}
         <div className="mb-6 border border-green-500 rounded-md p-4 bg-green-50">
@@ -107,30 +91,17 @@ const Footer = () => {
           </a>
         </div>
         
-        {/* Track Order Link 
-        <div className="flex justify-center mb-4">
-          <Link 
-            to="/orders" 
-            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            <Package size={18} />
-            <span>Track Your Order</span>
-          </Link>
-        </div>*/}
-        
         {/* Copyright */}
         <div className="text-center text-sm text-gray-500 mb-3">
           <p>2025 © to B3F prints and men's wear</p>
         </div>
+        
         {/* Social Links */}
         <div className="flex justify-center space-x-6 mb-10">
           <p className="font-medium">Follow us on</p>
           <Link to="https://www.instagram.com/b3f_prints?igsh=aG9nNzVleDdqZXA" className="text-pink-500 hover:text-pink-600 transition-colors">
             <Instagram />
           </Link>
-        {/*  <Link to="#" className="text-green-500 hover:text-green-600 transition-colors">
-            <Facebook />
-          </Link> */}
         </div>
         
       </div>

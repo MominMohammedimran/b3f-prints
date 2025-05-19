@@ -1,184 +1,174 @@
 
-import { EdgeFunctionApiService } from './api';
-import { Order } from '@/lib/types';
-import { NotificationType, sendNotification } from '../notificationService';
+import { supabase } from "@/integrations/supabase/client";
+import { Order } from "@/lib/types";
 
-// Mock order data with placeholder images
-const mockOrders: Record<string, Order> = {
-  'order-1': {
-    id: 'order-1',
-    user_id: 'user-1',
-    order_number: 'ORD12345',
-    status: 'processing',
-    total: 2499.99,
-    items: [
-      {
-        id: 'item-1',
-        productId: 'product-1',
-        name: 'Premium T-Shirt',
-        price: 999.99,
-        quantity: 2,
-        image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500'
-      },
-      {
-        id: 'item-2',
-        productId: 'product-2',
-        name: 'Designer Jeans',
-        price: 1499.99,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500'
-      }
-    ],
+export const createOrder = async (orderData: Partial<Order>): Promise<Order> => {
+  const order = {
+    id: orderData.id,
+    user_id: orderData.user_id,
+    order_number: orderData.order_number,
+    status: orderData.status,
+    total: orderData.total,
+    items: orderData.items,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    shipping_address: {
-      name: 'John Doe',
-      street: '123 Main St',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      zipCode: '400001',
-      country: 'India',
-      id: 'address-1',
-      user_id: 'user-1'
-    },
-    payment_method: 'credit_card',
-    delivery_fee: 99.99
+    shipping_address: orderData.shipping_address || orderData.shippingAddress,
+    payment_method: orderData.payment_method || orderData.paymentMethod || 'razorpay',
+    delivery_fee: orderData.delivery_fee || orderData.deliveryFee || 0,
+    user_email: orderData.user_email || '',
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data as Order;
+  } catch (error) {
+    console.error("Error creating order:", error);
+    throw error;
   }
 };
 
-export class OrderMicroservice {
-  private api: EdgeFunctionApiService;
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
 
-  constructor() {
-    this.api = new EdgeFunctionApiService();
-  }
-
-  // Create a new order
-  public async createOrder(orderData: Partial<Order>): Promise<Order> {
-    try {
-      console.log('Creating mock order with data:', orderData);
-      
-      const newOrderId = `order-${Date.now()}`;
-      const newOrder: Order = {
-        id: newOrderId,
-        user_id: orderData.user_id || 'anonymous',
-        order_number: `ORD${Math.floor(100000 + Math.random() * 900000)}`,
-        status: 'pending',
-        total: orderData.total || 0,
-        items: orderData.items || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        shipping_address: orderData.shipping_address || orderData.shippingAddress,
-        payment_method: orderData.payment_method || orderData.paymentMethod || 'cod'
-      };
-      
-      mockOrders[newOrderId] = newOrder;
-
-      if (newOrder.user_id) {
-        await sendNotification({
-          userId: newOrder.user_id,
-          orderId: newOrder.id,
-          type: NotificationType.ORDER_CONFIRMED,
-          data: {
-            estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          }
-        });
-      }
-
-      return newOrder;
-    } catch (error) {
-      console.error('Error creating order:', error);
+    if (error) {
       throw error;
     }
-  }
 
-  // Get order by ID
-  public async getOrder(orderId: string): Promise<Order> {
-    try {
-      const order = mockOrders[orderId];
-      if (!order) {
-        throw new Error('Order not found');
-      }
-      return order;
-    } catch (error) {
-      console.error('Error fetching order:', error);
+    return data as Order;
+  } catch (error) {
+    console.error("Error retrieving order:", error);
+    throw error;
+  }
+};
+
+export const getOrdersByUserId = async (userId: string): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
       throw error;
     }
+
+    return data as Order[];
+  } catch (error) {
+    console.error("Error retrieving orders by user ID:", error);
+    throw error;
+  }
+};
+
+export const updateOrder = async (orderId: string, updateData: Partial<Order>): Promise<Order> => {
+  // Normalize shipping_address field if shippingAddress is provided
+  if (updateData.shippingAddress && !updateData.shipping_address) {
+    updateData.shipping_address = updateData.shippingAddress;
+  }
+  
+  // Format order number
+  if (updateData.orderNumber && !updateData.order_number) {
+    updateData.order_number = updateData.orderNumber;
   }
 
-  // Get orders for a user
-  public async getUserOrders(userId: string): Promise<Order[]> {
-    try {
-      return Object.values(mockOrders).filter(order => order.user_id === userId);
-    } catch (error) {
-      console.error('Error fetching user orders:', error);
+  // Always update the updated_at timestamp
+  updateData.updated_at = new Date().toISOString();
+
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (error) {
       throw error;
     }
+
+    return data as Order;
+  } catch (error) {
+    console.error("Error updating order:", error);
+    throw error;
   }
+};
 
-  // Update order status
-  public async updateOrderStatus(orderId: string, status: string): Promise<Order> {
-    try {
-      const order = mockOrders[orderId];
-      if (!order) {
-        throw new Error('Order not found');
-      }
-      
-      order.status = status;
-      order.updated_at = new Date().toISOString();
-      
-      if (order.user_id) {
-        let notificationType: NotificationType;
-        let notificationData = {};
+export const deleteOrder = async (orderId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
 
-        switch (status) {
-          case 'shipped':
-            notificationType = NotificationType.ORDER_SHIPPED;
-            notificationData = {
-              trackingNumber: `TRK${Math.floor(100000 + Math.random() * 900000)}`,
-              estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-            };
-            break;
-          case 'delivered':
-            notificationType = NotificationType.ORDER_DELIVERED;
-            break;
-          default:
-            return order;
-        }
-
-        await sendNotification({
-          userId: order.user_id,
-          orderId,
-          type: notificationType,
-          data: notificationData
-        });
-      }
-
-      return order;
-    } catch (error) {
-      console.error('Error updating order status:', error);
+    if (error) {
       throw error;
     }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    throw error;
   }
+};
 
-  // Cancel an order
-  public async cancelOrder(orderId: string, reason: string): Promise<Order> {
-    try {
-      const order = mockOrders[orderId];
-      if (!order) {
-        throw new Error('Order not found');
-      }
-      
-      order.status = 'cancelled';
-      order.updated_at = new Date().toISOString();
-      order.cancellation_reason = reason;
+export const cancelOrder = async (orderId: string, reason?: string): Promise<Order> => {
+  try {
+    let updateData: Partial<Order> = { 
+      status: 'cancelled',
+      updated_at: new Date().toISOString()
+    };
+    
+    // Add cancellation reason if provided
+    if (reason) {
+      updateData.cancellation_reason = reason;
+    }
 
-      return order;
-    } catch (error) {
-      console.error('Error cancelling order:', error);
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (error) {
       throw error;
     }
-  }
-}
 
-export const orderMicroservice = new OrderMicroservice();
+    return data as Order;
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    throw error;
+  }
+};
+
+export const getAllOrders = async (): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as Order[];
+  } catch (error) {
+    console.error("Error retrieving all orders:", error);
+    throw error;
+  }
+};

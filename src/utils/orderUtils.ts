@@ -1,3 +1,4 @@
+
 import { Order, CartItem, ShippingAddress } from '@/lib/types';
 
 /**
@@ -42,11 +43,11 @@ export const formatAddress = (address: ShippingAddress | undefined): string => {
   if (!address) return 'No shipping address';
   
   const parts = [
-    address.name,
-    address.street,
+    address.fullName || address.name,
+    address.addressLine1 || address.street,
     address.city,
     address.state,
-    address.zipcode || address.zipCode,
+    address.postalCode || address.zipcode || address.zipCode,
     address.country,
   ].filter(Boolean);
   

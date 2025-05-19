@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'sonner';
@@ -14,20 +14,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, User, Menu, Package } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { ShoppingCart, User, Menu, Package, MapPin, Home, Phone, Info } from 'lucide-react';
 import { Input } from "@/components/ui/input"
 import { cn } from '@/lib/utils';
+import { useLocation as useLocationContext } from '@/context/LocationContext';
+import LocationPopup from '../ui/LocationPopup';
 
 interface NavItemProps {
   href: string;
   children: React.ReactNode;
   className?: string;
+  icon?: React.ReactNode;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ href, children, className }) => (
+const NavItem: React.FC<NavItemProps> = ({ href, children, className, icon }) => (
   <li>
-    <Link to={href} className={cn("font-medium text-sm hover:text-blue-600 transition-colors", className)}>
+    <Link to={href} className={cn("font-medium text-sm hover:text-blue-600 transition-colors flex items-center gap-1", className)}>
+      {icon}
       {children}
     </Link>
   </li>
@@ -38,8 +41,10 @@ const Navbar = () => {
   const { cartItems } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentLocation } = useLocationContext();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -54,6 +59,8 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white py-4 shadow-md sticky top-0 z-50">
+      {showLocationPopup && <LocationPopup onClose={() => setShowLocationPopup(false)} />}
+      
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo and Brand */}
@@ -61,6 +68,17 @@ const Navbar = () => {
             <img src="/logo.svg" alt="B3FASHION Logo" className="mr-2 h-8 w-auto" />
             B3FASHION
           </Link>
+
+          {/* Location Selector */}
+          {!isAdminRoute && (
+            <button 
+              onClick={() => setShowLocationPopup(true)}
+              className="hidden md:flex items-center text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <MapPin className="h-4 w-4 mr-1" />
+              <span className="text-sm font-medium">{currentLocation?.name || "Select Location"}</span>
+            </button>
+          )}
 
           {/* Cart and User links on the right */}
           <div className="flex items-center space-x-4">
@@ -131,10 +149,10 @@ const Navbar = () => {
           <ul className="flex items-center space-x-6 justify-center">
             {!isAdminRoute && (
               <>
-                <NavItem href="/">Home</NavItem>
-                <NavItem href="/products">Products</NavItem>
-                <NavItem href="/about">About</NavItem>
-                <NavItem href="/contact">Contact</NavItem>
+                <NavItem href="/" icon={<Home size={16} className="mr-1" />}>Home</NavItem>
+                <NavItem href="/products" icon={<ShoppingCart size={16} className="mr-1" />}>Products</NavItem>
+                <NavItem href="/about" icon={<Info size={16} className="mr-1" />}>About</NavItem>
+                <NavItem href="/contact" icon={<Phone size={16} className="mr-1" />}>Contact</NavItem>
                 <NavItem href="/design-tool">Custom Design</NavItem>
               </>
             )}
@@ -147,18 +165,25 @@ const Navbar = () => {
             <ul className="flex flex-col space-y-3">
               {!isAdminRoute && (
                 <>
-                  <NavItem href="/">Home</NavItem>
-                  <NavItem href="/products">Products</NavItem>
-                  <NavItem href="/about">About</NavItem>
-                  <NavItem href="/contact">Contact</NavItem>
+                  <NavItem href="/" icon={<Home size={16} className="mr-1" />}>Home</NavItem>
+                  <NavItem href="/products" icon={<ShoppingCart size={16} className="mr-1" />}>Products</NavItem>
+                  <NavItem href="/about" icon={<Info size={16} className="mr-1" />}>About</NavItem>
+                  <NavItem href="/contact" icon={<Phone size={16} className="mr-1" />}>Contact</NavItem>
                   <NavItem href="/design-tool">Custom Design</NavItem>
+                  <button 
+                    onClick={() => setShowLocationPopup(true)}
+                    className="flex items-center text-gray-700 hover:text-blue-600 transition-colors"
+                  >
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span className="text-sm font-medium">{currentLocation?.name || "Select Location"}</span>
+                  </button>
                 </>
               )}
             </ul>
           </div>
         )}
         
-        {/* Search bar (optional) */}
+        {/* Search bar */}
         {!isAdminRoute && (
           <div className="mt-4 hidden md:block">
             <Input type="search" placeholder="Search products..." className="rounded-full max-w-md mx-auto" />
