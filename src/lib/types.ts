@@ -19,6 +19,7 @@ export interface Product {
   productId?: string;
   sizes?: string[];
   additionalImages?: string[];
+  additionalImageFiles?: File[];
 }
 
 export interface CartItem {
@@ -48,6 +49,10 @@ export interface Order {
   delivery_fee?: number;
   shipping_address?: any;
   date?: string; // For compatibility with existing code
+  user_email?: string;
+  cancellation_reason?: string;
+  deliveryFee?: number; // For backward compatibility
+  shippingAddress?: any; // For backward compatibility
 }
 
 export interface TrackingInfo {
@@ -100,6 +105,10 @@ export interface ShippingAddress {
   country: string;
   phone: string;
   email?: string;
+  name?: string; // For backward compatibility
+  street?: string; // For backward compatibility
+  zipCode?: string; // For backward compatibility
+  zipcode?: string; // For backward compatibility
 }
 
 export interface PaymentDetails {
@@ -124,6 +133,7 @@ export interface Category {
   slug: string;
   image?: string;
   description?: string;
+  icon?: string; // Add icon property
 }
 
 export interface Review {
@@ -134,10 +144,25 @@ export interface Review {
   comment: string;
   username: string;
   createdAt: string;
+  user_id?: string; // For backward compatibility
+  product_id?: string; // For backward compatibility
+  created_at?: string; // For backward compatibility
+  text?: string; // For backward compatibility
+  date?: string; // For backward compatibility
+  helpful?: number; // For backward compatibility
+  userName?: string; // For backward compatibility
 }
 
 export interface Location {
   id: string;
   name: string;
   code: string;
+}
+
+// Add AdminUser interface
+export interface AdminUser {
+  id: string;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
 }

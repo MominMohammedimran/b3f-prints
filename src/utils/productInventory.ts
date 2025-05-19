@@ -19,7 +19,8 @@ export const getProductInventory = async () => {
       };
     }
     
-    return settings?.settings?.inventory || {
+    // Cast settings.settings to the correct type and access inventory property
+    return (settings?.settings as any)?.inventory || {
       tshirt: { S: 10, M: 10, L: 10, XL: 10 },
       mug: { Standard: 10 },
       cap: { Standard: 10 }
@@ -103,11 +104,14 @@ export const updateInventoryForDeliveredOrder = async (orderId: string) => {
       if (Array.isArray(items)) {
         // Process each item
         for (const item of items) {
-          if (item.productType && item.size && item.quantity) {
+          // Cast item to the appropriate type before accessing properties
+          const typedItem = item as { productType?: string; size?: string; quantity?: number };
+          
+          if (typedItem.productType && typedItem.size && typedItem.quantity) {
             await updateProductInventory(
-              item.productType,
-              item.size,
-              item.quantity
+              typedItem.productType,
+              typedItem.size,
+              typedItem.quantity
             );
           }
         }

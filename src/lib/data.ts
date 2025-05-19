@@ -1,4 +1,3 @@
-
 import { Product, Category, Order, TrackingInfo, Review, Location } from './types';
 
 export const products: Product[] = [
@@ -132,27 +131,32 @@ export const categories: Category[] = [
   {
     id: '1',
     name: 'Shirts',
-    icon: '/lovable-uploads/hero-categorie/shirt.png'
+    icon: '/lovable-uploads/hero-categorie/shirt.png',
+    slug: 'shirts'
   },
   {
     id: '2',
     name: 'Pants',
-    icon: '/lovable-uploads/hero-categorie/pant.png'
+    icon: '/lovable-uploads/hero-categorie/pant.png',
+    slug: 'pants'
   },
   {
     id: '3',
     name: 'Tshirt-print',
-    icon: '/lovable-uploads/hero-categorie/tshirt-print.png'
+    icon: '/lovable-uploads/hero-categorie/tshirt-print.png',
+    slug: 'tshirt-print'
   },
   {
     id: '4',
     name: 'mug-print',
-    icon: '/lovable-uploads/hero-categorie/mug-print.png'
+    icon: '/lovable-uploads/hero-categorie/mug-print.png',
+    slug: 'mug-print'
   },
   {
     id: '5',
     name: 'cap-print',
-    icon: '/lovable-uploads/hero-categorie/cap-print.png'
+    icon: '/lovable-uploads/hero-categorie/cap-print.png',
+    slug: 'cap-print'
   },
  
 ];
@@ -161,6 +165,7 @@ export const orders: Order[] = [
   {
     id: 'id12345',
     user_id: 'user123',
+    order_number: 'ORD12345',
     items: [
       {
         id: '1',
@@ -184,13 +189,15 @@ export const orders: Order[] = [
     status: 'delivered',
     date: '2023-05-15',
     created_at: '2023-05-15',
+    updated_at: '2023-05-15',
     total: 980,
-    deliveryFee: 100,
-    paymentMethod: 'upi'
+    delivery_fee: 100,
+    payment_method: 'upi'
   },
   {
     id: 'id12346',
     user_id: 'user123',
+    order_number: 'ORD12346',
     items: [
       {
         id: '3',
@@ -204,9 +211,10 @@ export const orders: Order[] = [
     status: 'processing',
     date: '2023-05-20',
     created_at: '2023-05-20',
+    updated_at: '2023-05-20',
     total: 490,
-    deliveryFee: 100,
-    paymentMethod: 'upi'
+    delivery_fee: 100,
+    payment_method: 'upi'
   }
 ];
 
@@ -339,29 +347,33 @@ export const popularSearches = [
 export const reviews: Review[] = [
   {
     id: '1',
-    user_id: 'user1',
-    product_id: '1',
+    userId: 'user1',
+    productId: '1',
     rating: 5,
     comment: 'Awesome',
     created_at: '2025-01-25T00:00:00Z',
-    userId: 'user1', // Keep for backwards compatibility
+    user_id: 'user1', // For backwards compatibility
     userName: 'Pavan Raj',
-    text: 'Awesome', // Keep for backward compatibility
+    text: 'Awesome', // For backward compatibility
     date: '25-01-2025',
-    helpful: 0
+    helpful: 0,
+    createdAt: '2025-01-25T00:00:00Z',
+    username: 'Pavan Raj'
   },
   {
     id: '2',
-    user_id: 'user2',
-    product_id: '2',
+    userId: 'user2',
+    productId: '2',
     rating: 5,
     comment: 'Awesome',
     created_at: '2025-01-25T00:00:00Z',
-    userId: 'user2', // Keep for backwards compatibility
+    user_id: 'user2', // For backwards compatibility
     userName: 'Rohit Raj',
-    text: 'Awesome', // Keep for backward compatibility
+    text: 'Awesome', // For backward compatibility
     date: '25-01-2025',
-    helpful: 0
+    helpful: 0,
+    createdAt: '2025-01-25T00:00:00Z',
+    username: 'Rohit Raj'
   }
 ];
 

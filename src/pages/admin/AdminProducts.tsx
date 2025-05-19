@@ -156,8 +156,12 @@ const AdminProducts = () => {
       }
       
       // Upload additional images if available
-      if (productData.additionalImageFiles && productData.additionalImageFiles.length > 0) {
-        const additionalImageUrls = await uploadMultipleImages(productData.additionalImageFiles);
+      if (productData.additionalImages && productData.additionalImages.length > 0) {
+        const additionalImageUrls = await uploadMultipleImages(
+          productData.additionalImages instanceof Array 
+            ? productData.additionalImages as unknown as File[]
+            : []
+        );
         imageUrls = [...imageUrls, ...additionalImageUrls];
       }
 

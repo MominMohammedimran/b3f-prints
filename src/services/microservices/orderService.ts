@@ -30,6 +30,7 @@ const mockOrders: Record<string, Order> = {
       }
     ],
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     shipping_address: {
       name: 'John Doe',
       street: '123 Main St',
@@ -61,13 +62,14 @@ export class OrderMicroservice {
       const newOrder: Order = {
         id: newOrderId,
         user_id: orderData.user_id || 'anonymous',
-        orderNumber: `ORD${Math.floor(100000 + Math.random() * 900000)}`,
+        order_number: `ORD${Math.floor(100000 + Math.random() * 900000)}`,
         status: 'pending',
         total: orderData.total || 0,
         items: orderData.items || [],
         created_at: new Date().toISOString(),
-        shippingAddress: orderData.shippingAddress,
-        paymentMethod: orderData.paymentMethod || 'cod'
+        updated_at: new Date().toISOString(),
+        shipping_address: orderData.shipping_address || orderData.shippingAddress,
+        payment_method: orderData.payment_method || orderData.paymentMethod || 'cod'
       };
       
       mockOrders[newOrderId] = newOrder;
