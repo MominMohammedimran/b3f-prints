@@ -11,7 +11,7 @@ export const getServerSideProps = async ({ res }) => {
   </url>
 </urlset>`;
 
-  // ✅ Set critical headers to prevent Cloudflare/browser caching
+  // ✅ Add these headers to prevent caching
   res.setHeader("Content-Type", "application/xml");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
