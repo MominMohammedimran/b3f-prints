@@ -11,11 +11,13 @@ export const getServerSideProps = async ({ res }) => {
   </url>
 </urlset>`;
 
-  // ✅ Add these headers to prevent caching
+  // 🚫 Disable all caching
   res.setHeader("Content-Type", "application/xml");
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
+  res.removeHeader?.("ETag");
+  res.removeHeader?.("Last-Modified");
 
   res.write(sitemap);
   res.end();
