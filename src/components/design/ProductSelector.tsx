@@ -13,6 +13,12 @@ interface ProductSelectorProps {
   activeProduct: string;
   isDualSided: boolean;
   onProductSelect: (productId: string) => void;
+  selectedProduct?: string;
+  selectedSize?: string;
+  inventory?: Record<string, Record<string, number>>;
+  isLoading?: boolean;
+  onProductChange?: (productType: string) => void;
+  onSizeChange?: (size: string) => void;
 }
 
 const ProductSelector: React.FC<ProductSelectorProps> = ({
@@ -20,7 +26,22 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
   activeProduct,
   isDualSided,
   onProductSelect,
+  onProductChange,
+  selectedSize,
+  selectedProduct,
+  inventory,
+  isLoading,
+  onSizeChange
 }) => {
+  // Use the appropriate handler based on props provided
+  const handleProductSelect = (id: string) => {
+    if (onProductChange) {
+      onProductChange(id);
+    } else if (onProductSelect) {
+      onProductSelect(id);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-2">
       <h2 className="text-lg font-semibold mb-3">Select Product</h2>
@@ -28,9 +49,9 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
         {Object.entries(products).map(([id, product]) => (
           <button
             key={id}
-            onClick={() => onProductSelect(id)}
+            onClick={() => handleProductSelect(id)}
             className={`flex flex-col items-center p-3 rounded-md border ${
-              activeProduct === id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+              (activeProduct === id || selectedProduct === id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
             }`}
           >
             <div className="w-14 h-12 bg-gray-100 rounded-md flex items-center justify-center mb-2">

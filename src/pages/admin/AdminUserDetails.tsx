@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, UserEdit, MapPin, Package, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, MapPin, Package, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -169,7 +168,7 @@ const AdminUserDetails = () => {
                 <Separator />
                 <div className="flex justify-end">
                   <Button variant="outline" className="flex items-center">
-                    <UserEdit size={16} className="mr-2" />
+                    <User size={16} className="mr-2" />
                     Edit Profile
                   </Button>
                 </div>

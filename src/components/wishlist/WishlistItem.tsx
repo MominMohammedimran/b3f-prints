@@ -11,6 +11,8 @@ interface WishlistItemProps {
     name: string;
     price: number;
     image?: string;
+    category?: string;
+    originalPrice?: number;
   };
   onRemove: (productId: string) => void;
   onAddToCart: (item: any) => void;
@@ -32,7 +34,17 @@ const WishlistItem: React.FC<WishlistItemProps> = ({ item, onRemove, onAddToCart
         <Link to={`/product/${productId}`} className="font-medium hover:text-blue-600">
           {item.name}
         </Link>
-        <div className="text-green-600 font-medium mt-1">₹{item.price}</div>
+        {item.category && (
+          <div className="text-sm text-gray-500">Category: {item.category}</div>
+        )}
+        <div className="flex items-center mt-1">
+          <span className="text-green-600 font-medium">₹{item.price}</span>
+          {item.originalPrice && item.originalPrice > item.price && (
+            <span className="text-sm text-gray-400 line-through ml-2">
+              ₹{item.originalPrice}
+            </span>
+          )}
+        </div>
       </div>
       
       <div className="flex space-x-2">

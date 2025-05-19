@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart, Pencil } from 'lucide-react';
@@ -40,7 +39,7 @@ const ProductCard = ({
     e.stopPropagation();
     
     if (!isCustomProduct) {
-      navigate(`/product/details/${product.productId}`);
+      navigate(`/product/${product.id}`);
       return;
     }
     
@@ -66,7 +65,7 @@ const ProductCard = ({
         await removeFromWishlist(product.id);
         toast.success(`${product.name} removed from wishlist!`);
       } else {
-        await addToWishlist(product);
+        await addToWishlist(product.id);
         toast.success(`${product.name} added to wishlist!`);
       }
     } catch (error) {
@@ -88,7 +87,7 @@ const ProductCard = ({
       if (isCustomProduct) {
         navigate(`/design-tool`);
       } else {
-        navigate(`/product/details/${product.productId}`);
+        navigate(`/product/${product.id}`);
       }
     }
   };

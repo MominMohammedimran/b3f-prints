@@ -14,6 +14,8 @@ export interface WishlistItem {
   name: string;
   price: number;
   image?: string;
+  category?: string;
+  originalPrice?: number;
   updated_at?: string;
 }
 
@@ -22,6 +24,7 @@ interface WishlistContextType {
   wishlistItems: WishlistItem[];
   addToWishlist: (productId: string) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
+  clearWishlist: () => Promise<void>;
   isInWishlist: (productId: string) => boolean;
   loading: boolean;
 }
@@ -31,6 +34,7 @@ const WishlistContext = createContext<WishlistContextType>({
   wishlistItems: [],
   addToWishlist: async () => {},
   removeFromWishlist: async () => {},
+  clearWishlist: async () => {},
   isInWishlist: () => false,
   loading: false,
 });
@@ -72,6 +76,8 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
             name: product?.name || 'Product',
             price: product?.price || 0,
             image: product?.image || '',
+            category: product?.category || '',
+            originalPrice: product?.originalPrice || undefined,
           };
         });
 
@@ -137,7 +143,9 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
           ...data[0],
           name: product.name,
           price: product.price,
-          image: product.image
+          image: product.image,
+          category: product.category,
+          originalPrice: product.originalPrice
         }]);
         toast.success('Added to wishlist');
       }
@@ -173,6 +181,28 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
+  // Clear the entire wishlist
+  const clearWishlist = async () => {
+    if (!currentUser || wishlistItems.length === 0) return;
+
+    try {
+      // Remove all items from Supabase
+      const { error } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('user_id', currentUser.id);
+
+      if (error) throw error;
+
+      // Clear the state
+      setWishlistItems([]);
+      toast.success('Wishlist cleared');
+    } catch (error: any) {
+      console.error('Error clearing wishlist:', error);
+      toast.error(error.message || 'Failed to clear wishlist');
+    }
+  };
+
   // Check if a product is in the wishlist
   const isInWishlist = (productId: string) => {
     return wishlistItems.some(item => item.product_id === productId);
@@ -183,6 +213,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       wishlistItems,
       addToWishlist,
       removeFromWishlist,
+      clearWishlist,
       isInWishlist,
       loading
     }}>
