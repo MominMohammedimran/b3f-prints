@@ -17,6 +17,7 @@ export const useCartFunctions = () => {
         quantity
       });
       
+      toast.success('Added to cart successfully');
       return true;
     } catch (error) {
       console.error('Error adding to cart:', error);

@@ -1,142 +1,107 @@
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  productId?: string;
-  size?: string;
-  view?: string;
-  backImage?: string;
-  color?: string;
-  options?: Record<string, string>;
-}
-
-export interface Order {
-  id: string;
-  order_number?: string;
-  orderNumber?: string;
-  user_id: string;
-  user_email?: string;
-  items: CartItem[];
-  total: number;
-  status: string;
-  payment_method?: string;
-  paymentMethod?: string;
-  shipping_address?: any;
-  shippingAddress?: any;
-  delivery_fee?: number;
-  deliveryFee?: number;
-  created_at: string;
-  updated_at?: string;
-  date?: string; // Adding this for backwards compatibility
-  cancellation_reason?: string; // Adding this for orderService.ts
-}
+// If this file exists, add these types to it. 
+// If not, create the file with these types.
 
 export interface Product {
   id: string;
-  code?: string;
+  code: string;
   name: string;
-  description?: string;
+  description: string;
   price: number;
   originalPrice?: number;
   discountPercentage?: number;
   image: string;
-  additionalImages?: string[];
-  images?: string[];
-  additionalImageFiles?: File[]; // For file uploads
   rating?: number;
   category?: string;
   tags?: string[];
   stock?: number;
-  sizes?: string[];
-  productId?: string; // Adding this for backwards compatibility
-  options?: Record<string, string[]>;
+  productId?: string;
 }
 
-export interface Category {
+export interface CartItem {
   id: string;
+  productId: string;
   name: string;
-  count?: number;
-  icon?: string; // Adding icon property
+  price: number;
+  quantity: number;
+  image?: string;
+  size?: string;
+  color?: string;
+  productType?: string;
 }
 
-export interface Location {
-  id: string;
-  name: string;
-  code: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Review {
+export interface Order {
   id: string;
   user_id: string;
-  product_id: string;
-  rating: number;
-  comment?: string;
+  order_number: string;
+  status: string;
+  total: number;
+  items: CartItem[];
   created_at: string;
-  userId?: string; // For backwards compatibility
-  userName?: string; // For display purposes
-  text?: string; // For backwards compatibility
-  date?: string; // For display purposes
-  helpful?: number; // For feature extension
+  updated_at: string;
+  payment_method: string;
+  delivery_fee?: number;
+  shipping_address?: any;
 }
 
 export interface TrackingInfo {
   id: string;
   order_id: string;
   status: string;
-  location: string;
   timestamp: string;
-  description?: string;
-  currentLocation?: string; // For UI display
-  estimatedDelivery?: string; // For UI display
+  location: string;
+  currentLocation?: string;
+  estimatedDelivery?: string;
   date?: string;
   time?: string;
-  orderId?: string; // For backwards compatibility
-  history?: { 
-    status: string;
-    timestamp: string;
-    location: string;
-    description?: string;
-  }[];
+  history?: TrackingHistoryItem[];
+  orderNumber?: string;
+  items?: CartItem[];
+  total?: number;
+  shippingAddress?: any;
+}
+
+export interface TrackingHistoryItem {
+  status: string;
+  timestamp: string;
+  location: string;
+  description?: string;
 }
 
 export interface UserProfile {
   id: string;
-  email?: string;
+  email: string;
   first_name?: string;
   last_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at?: string;
   display_name?: string;
+  avatar_url?: string;
   phone_number?: string;
-  reward_points?: number;
-  auth_user?: {
-    email: string;
-  };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ShippingAddress {
-  name?: string;
-  street?: string;
-  city?: string;
-  state?: string;
-  zipcode?: string;
-  zipCode?: string; // For backwards compatibility
-  country?: string;
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+  email?: string;
 }
 
-export interface AdminUser {
-  id: string;
-  email: string;
-  role?: string | null;
-  created_at: string;
-  updated_at?: string | null;
-  user_id?: string | null;
-  permissions?: string[];
+export interface PaymentDetails {
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  method: string;
+}
+
+export interface ProductInventoryItem {
+  productType: string;
+  size: string;
+  quantity: number;
 }

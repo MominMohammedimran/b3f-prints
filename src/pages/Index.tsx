@@ -11,14 +11,12 @@ import { products, categories } from '../lib/data';
 import { Product } from '../lib/types';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useLocation } from '../context/LocationContext';
-import { useWishlist } from '../context/WishlistContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
   const { currentLocation } = useLocation();
-  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const [visibleCategories, setVisibleCategories] = useState<number>(4);
   const [startIndex, setStartIndex] = useState(0);
   const categoriesRef = useRef<HTMLDivElement>(null);

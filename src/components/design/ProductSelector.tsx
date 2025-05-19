@@ -8,7 +8,7 @@ interface Product {
   image: string;
 }
 
-interface ProductSelectorProps {
+export interface ProductSelectorProps {
   products: Record<string, Product>;
   activeProduct: string;
   isDualSided: boolean;
@@ -42,6 +42,48 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
     }
   };
 
+  // Handle size selection if provided
+  const handleSizeChange = (size: string) => {
+    if (onSizeChange) {
+      onSizeChange(size);
+    }
+  };
+
+  // Generate size options based on the product type
+  const renderSizeOptions = () => {
+    if (!selectedProduct || !inventory || isLoading) return null;
+
+    const sizes = Object.keys(inventory[selectedProduct] || {});
+    if (sizes.length === 0) return null;
+
+    return (
+      <div className="mt-4">
+        <h3 className="font-medium mb-2">Select Size:</h3>
+        <div className="flex flex-wrap gap-2">
+          {sizes.map((size) => {
+            const inStock = (inventory[selectedProduct][size] || 0) > 0;
+            return (
+              <button
+                key={size}
+                onClick={() => handleSizeChange(size)}
+                className={`px-3 py-1 border rounded-md text-sm ${
+                  selectedSize === size
+                    ? 'bg-blue-500 text-white border-blue-500' 
+                    : inStock 
+                      ? 'border-gray-300 hover:border-blue-300' 
+                      : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+                disabled={!inStock}
+              >
+                {size} {!inStock && '(Out of stock)'}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-2">
       <h2 className="text-lg font-semibold mb-3">Select Product</h2>
@@ -64,6 +106,8 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
           </button>
         ))}
       </div>
+
+      {renderSizeOptions()}
     </div>
   );
 };
