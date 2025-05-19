@@ -1,3 +1,5 @@
+// pages/api/sitemap.js
+
 export default function handler(req, res) {
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -9,6 +11,7 @@ export default function handler(req, res) {
   </url>
 </urlset>`;
 
+  // Anti-cache headers
   res.setHeader("Content-Type", "application/xml");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
   res.setHeader("Pragma", "no-cache");
