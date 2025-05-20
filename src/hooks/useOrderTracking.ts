@@ -73,7 +73,7 @@ export const useOrderTracking = (orderId: string | undefined) => {
     try {
       console.log('Fetching tracking data for order:', orderId);
       
-      // Use let instead of const for orderData since we need to reassign it
+      // Changed from const to let to allow reassignment
       let { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
