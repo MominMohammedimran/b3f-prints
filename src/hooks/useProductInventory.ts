@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { getProductInventory } from '@/utils/productInventory';
+import { getProductInventory, updateProductInventory } from '@/utils/productInventory';
 
 export const useProductInventory = () => {
   const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({
@@ -9,10 +9,11 @@ export const useProductInventory = () => {
     mug: { Standard: 20 },
     cap: { Standard: 12 }
   });
+  const [loading, setLoading] = useState(false);
 
-  const fetchProductInventory = async () => {
+  const fetchProductInventory = useCallback(async () => {
     try {
-      // Fix: Use our utility function instead of direct Supabase call
+      setLoading(true);
       const inventoryData = await getProductInventory();
       
       if (inventoryData) {
@@ -21,22 +22,37 @@ export const useProductInventory = () => {
     } catch (err) {
       console.error('Error fetching inventory:', err);
       toast.error('Failed to load product availability data');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  // Use this for initial load
+  useEffect(() => {
+    fetchProductInventory();
+  }, [fetchProductInventory]);
 
   const updateInventory = async (productType: string, size: string, change: number) => {
     try {
-      // In a real app, this would update the Supabase database
-      // Since we don't have the product_inventory table in Supabase yet, update local state
-      setSizeInventory(prev => ({
-        ...prev,
-        [productType]: {
-          ...prev[productType],
-          [size]: prev[productType][size] + change
-        }
-      }));
+      // Calculate the new quantity
+      const currentQuantity = sizeInventory[productType]?.[size] || 0;
+      const newQuantity = Math.max(0, currentQuantity + change); // Ensure non-negative
       
-      return true;
+      // In a real app, this would update the Supabase database
+      const success = await updateProductInventory(productType, size, newQuantity);
+      
+      if (success) {
+        // Update local state
+        setSizeInventory(prev => ({
+          ...prev,
+          [productType]: {
+            ...prev[productType],
+            [size]: newQuantity
+          }
+        }));
+      }
+      
+      return success;
     } catch (err) {
       console.error('Error updating inventory:', err);
       toast.error('Failed to update inventory', {
@@ -48,7 +64,10 @@ export const useProductInventory = () => {
 
   return {
     sizeInventory,
+    loading,
     fetchProductInventory,
     updateInventory
   };
 };
+
+export default useProductInventory;
