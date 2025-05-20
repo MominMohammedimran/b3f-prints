@@ -39,6 +39,8 @@ interface AdminRecord {
 
 export const validateAdminSession = async (): Promise<AdminUser | null> => {
   try {
+    console.log("Validating admin session");
+    
     // Get the current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
@@ -53,6 +55,8 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
       console.error("User email is missing in session");
       return null;
     }
+    
+    console.log("Found session for email:", email);
     
     // Query the admin_users table
     const { data, error } = await supabase
@@ -70,6 +74,8 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
       console.error("Not an admin user, no matching record found");
       return null;
     }
+
+    console.log("Found admin record:", data);
 
     // Cast data to AdminRecord type to ensure type safety
     const adminRecord = data as AdminRecord;
@@ -94,7 +100,14 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
 
 // Add the missing functions for admin authentication
 export const isAdminAuthenticated = async (): Promise<boolean> => {
-  return await isAdminSessionValid();
+  try {
+    const isValid = await isAdminSessionValid();
+    console.log("Admin authentication check result:", isValid);
+    return isValid;
+  } catch (error) {
+    console.error("Admin authentication check error:", error);
+    return false;
+  }
 };
 
 export const getAdminDetails = async (): Promise<AdminUser | null> => {

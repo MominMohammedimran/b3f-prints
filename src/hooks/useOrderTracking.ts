@@ -71,21 +71,42 @@ export const useOrderTracking = (orderId: string | undefined) => {
     if (!orderId) throw new Error('Order ID is missing');
 
     try {
+      console.log('Fetching tracking data for order:', orderId);
+      
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('status, created_at, updated_at')
+        .select('*')
         .eq('id', orderId)
         .maybeSingle();
 
       if (orderError) {
-        console.error('Order status fetch error:', orderError);
+        console.error('Order data fetch error:', orderError);
         return generateMockTrackingData(orderId);
       }
+      
+      if (!orderData) {
+        console.log('No order data found, checking by order_number');
+        // Try to fetch by order_number instead
+        const { data: orderByNumber, error: numberError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('order_number', orderId)
+          .maybeSingle();
+          
+        if (numberError || !orderByNumber) {
+          console.error('Order not found by number either:', numberError);
+          return generateMockTrackingData(orderId);
+        }
+        
+        orderData = orderByNumber;
+      }
+
+      console.log('Order data found:', orderData);
 
       const { data: trackingData, error: trackingError } = await supabase
         .from('order_tracking')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', orderData.id)
         .maybeSingle();
 
       if (trackingError) {
@@ -158,8 +179,8 @@ export const useOrderTracking = (orderId: string | undefined) => {
 
         // Create tracking info from order data
         const trackingInfo: TrackingInfo = {
-          id: `tracking-${orderId}`,
-          order_id: orderId,
+          id: `tracking-${orderData.id}`,
+          order_id: orderData.id,
           status: orderStatus,
           timestamp: updatedAt.toISOString(),
           location: orderStatus === 'delivered' ? 'Delivered' : 
@@ -196,7 +217,7 @@ export const useOrderTracking = (orderId: string | undefined) => {
     queryFn: fetchTracking,
     enabled: !!orderId,
     staleTime: 60000,
-    retry: 1
+    retry: 2
   });
 
   return { 

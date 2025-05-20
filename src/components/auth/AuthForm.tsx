@@ -61,9 +61,12 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
         } 
         
         // If login is successful
-        if (data) {
+        if (data && data.session) {
           toast.success('Sign in successful!');
           navigate(redirectTo);
+        } else {
+          toast.error('Unable to authenticate. Please try again.');
+          setLoading(false);
         }
       } else if (mode === 'signup') {
         if (password !== confirmPassword) {
@@ -92,8 +95,11 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
     } catch (error: any) {
       console.error('Authentication error:', error);
       toast.error(error.message || 'Authentication failed');
-    } finally {
       setLoading(false);
+    } finally {
+      if (mode === 'signin') {
+        setLoading(false);
+      }
     }
   };
 
@@ -154,12 +160,15 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
     setLoading(true);
     try {
       console.log(`Attempting to verify OTP for ${email} with token: ${token}`);
-      const { error } = await verifyOtpWithEmail(token);
+      const { data, error } = await verifyOtpWithEmail(token);
+      
       if (error) {
         throw error;
-      } else {
+      } else if (data && data.session) {
         toast.success('Verification successful!');
         navigate(redirectTo);
+      } else {
+        throw new Error('Authentication failed');
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);

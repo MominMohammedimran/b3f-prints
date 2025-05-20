@@ -17,6 +17,8 @@ const statusSteps = [
 const statusMap: Record<string, string> = {
   processing: 'processing',
   prepared: 'processing',
+  order_placed: 'processing',
+  pending: 'processing',
   shipped: 'shipped',
   shipping: 'shipped',
   out_for_delivery: 'out_for_delivery',
@@ -29,7 +31,9 @@ const OrderTrackingStatus: React.FC<OrderTrackingStatusProps> = ({
   estimatedDelivery,
 }) => {
   // Normalize status - default to processing if invalid status provided
-  const normalizedStatus = (currentStatus && statusMap[currentStatus.toLowerCase()]) || 'processing';
+  const normalizedStatus = currentStatus && typeof currentStatus === 'string'
+    ? (statusMap[currentStatus.toLowerCase()] || 'processing')
+    : 'processing';
   
   // Find the index of the current status in our steps
   const currentStatusIndex = statusSteps.findIndex(step => step.key === normalizedStatus);

@@ -49,6 +49,7 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
     const loadScript = async () => {
       try {
         const loaded = await loadRazorpayScript();
+        console.log("Razorpay script loaded status:", loaded);
         setIsScriptLoaded(loaded);
         if (!loaded) {
           toast.error('Could not load payment gateway. Please try again later.');
@@ -67,11 +68,13 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
     
     try {
       if (!(window as any).Razorpay) {
-        await loadRazorpayScript();
-        if (!(window as any).Razorpay) {
+        const loaded = await loadRazorpayScript();
+        if (!loaded || !(window as any).Razorpay) {
           throw new Error('Razorpay not loaded');
         }
       }
+      
+      console.log("Initializing Razorpay payment with order:", orderId, "amount:", amount);
       
       const name = userProfile?.display_name || currentUser?.user_metadata?.full_name || '';
       const email = currentUser?.email || userProfile?.email || '';
@@ -103,6 +106,7 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
           animation: true
         },
         handler: function (response: any) {
+          console.log("Razorpay payment successful:", response);
           onSuccess({
             paymentId: response.razorpay_payment_id,
             orderId: response.razorpay_order_id || orderId,
@@ -115,8 +119,16 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
         }
       };
 
+      console.log("Creating Razorpay instance with options:", options);
+
       // Initialize Razorpay instance
       const razorpay = new (window as any).Razorpay(options);
+      razorpay.on('payment.failed', function (response: any) {
+        console.error("Payment failed:", response.error);
+        toast.error(`Payment failed: ${response.error.description}`);
+        onFailure();
+        setIsLoading(false);
+      });
       razorpay.open();
     } catch (error: any) {
       console.error('Payment error:', error);

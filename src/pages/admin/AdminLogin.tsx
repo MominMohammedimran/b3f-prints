@@ -48,8 +48,12 @@ const AdminLogin = () => {
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (currentUser) {
-        try {
+      try {
+        setLoading(true);
+        
+        if (currentUser) {
+          console.log("Checking admin status for", currentUser.email);
+          
           // Use explicit typing to avoid deep instantiation
           const { data, error: adminError } = await supabase
             .from('admin_users')
@@ -77,13 +81,16 @@ const AdminLogin = () => {
             
             // Redirect to admin dashboard if already logged in
             navigate('/admin/dashboard');
+            toast.success('Admin session restored');
           }
-        } catch (error) {
-          console.error('Error checking admin status:', error);
+        } else {
           setAdmin(null);
         }
-      } else {
+      } catch (error) {
+        console.error('Error checking admin status:', error);
         setAdmin(null);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -105,7 +112,7 @@ const AdminLogin = () => {
         .eq('email', email)
         .maybeSingle();
         
-      if (adminCheckError) {
+      if (adminCheckError || !adminData) {
         // Special case for B3F email
         if (email !== 'b3fprintingsolutions@gmail.com') {
           toast.error('This email is not registered as an admin');
@@ -151,6 +158,8 @@ const AdminLogin = () => {
         throw new Error('Authentication successful but user ID is missing');
       }
       
+      console.log("OTP verification successful, user ID:", userId);
+      
       // Check if user is in admin table
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
@@ -158,11 +167,16 @@ const AdminLogin = () => {
         .eq('email', email)
         .maybeSingle();
         
-      if (adminError || !adminData) {
+      if (adminError) {
+        console.error("Error checking admin status:", adminError);
+      }
+        
+      if (!adminData) {
         // Special case for B3F email
         if (email === 'b3fprintingsolutions@gmail.com') {
+          console.log("Creating admin record for the default admin account");
           // Create admin record if it doesn't exist
-          const { error: createError } = await supabase
+          const { data: newAdminData, error: createError } = await supabase
             .from('admin_users')
             .insert({ 
               email: email,
@@ -170,7 +184,9 @@ const AdminLogin = () => {
               role: 'admin',
               created_at: new Date().toISOString(),
               permissions: DEFAULT_ADMIN_PERMISSIONS
-            });
+            })
+            .select()
+            .single();
             
           if (createError) {
             console.error("Error creating admin record:", createError);
@@ -179,6 +195,15 @@ const AdminLogin = () => {
             setLoading(false);
             return;
           }
+          
+          setAdmin({
+            id: newAdminData.id,
+            email: newAdminData.email,
+            role: newAdminData.role || 'admin',
+            created_at: newAdminData.created_at,
+            user_id: newAdminData.user_id,
+            permissions: newAdminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+          });
         } else {
           setError('You are not authorized as an admin.');
           toast.error('You are not authorized as an admin.');
@@ -187,6 +212,15 @@ const AdminLogin = () => {
           setLoading(false);
           return;
         }
+      } else {
+        setAdmin({
+          id: adminData.id,
+          email: adminData.email,
+          role: adminData.role || 'admin',
+          created_at: adminData.created_at,
+          user_id: adminData.user_id || userId,
+          permissions: adminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+        });
       }
       
       toast.success('Admin verification successful!');
@@ -208,12 +242,15 @@ const AdminLogin = () => {
     try {
       // Special case for the predefined admin
       if (email === 'b3fprintingsolutions@gmail.com' && password === 'Mmdimran@1') {
+        console.log("Attempting login with predefined admin credentials");
+        
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
           password: password,
         });
 
         if (error) {
+          console.error("Login error:", error);
           setError(error.message);
           toast.error(error.message);
           setLoading(false);
@@ -227,6 +264,8 @@ const AdminLogin = () => {
           throw new Error('Authentication successful but user ID is missing');
         }
         
+        console.log("Admin login successful, user ID:", userId);
+        
         // Check if admin record exists
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
@@ -236,7 +275,9 @@ const AdminLogin = () => {
           
         // Create admin record if it doesn't exist
         if (adminError || !adminData) {
-          const { error: createError } = await supabase
+          console.log("Admin record not found, creating new one");
+          
+          const { data: newAdmin, error: createError } = await supabase
             .from('admin_users')
             .insert({ 
               email: email,
@@ -244,7 +285,9 @@ const AdminLogin = () => {
               role: 'admin',
               created_at: new Date().toISOString(),
               permissions: DEFAULT_ADMIN_PERMISSIONS
-            });
+            })
+            .select()
+            .single();
             
           if (createError) {
             console.error("Error creating admin record:", createError);
@@ -254,17 +297,27 @@ const AdminLogin = () => {
             setLoading(false);
             return;
           }
+          
+          setAdmin({
+            id: newAdmin.id,
+            email: newAdmin.email,
+            role: newAdmin.role || 'admin',
+            created_at: newAdmin.created_at,
+            user_id: newAdmin.user_id,
+            permissions: newAdmin.permissions || DEFAULT_ADMIN_PERMISSIONS
+          });
+        } else {
+          // Admin record exists
+          setAdmin({
+            id: adminData.id,
+            email: adminData.email,
+            role: adminData.role || 'admin',
+            created_at: adminData.created_at,
+            updated_at: adminData.updated_at,
+            user_id: adminData.user_id || userId,
+            permissions: adminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+          });
         }
-        
-        // Set admin state
-        setAdmin({
-          id: userId,
-          email: email,
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          user_id: userId,
-          permissions: DEFAULT_ADMIN_PERMISSIONS
-        });
         
         toast.success('Admin login successful');
         navigate('/admin/dashboard');
