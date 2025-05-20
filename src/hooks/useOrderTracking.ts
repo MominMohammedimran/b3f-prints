@@ -93,7 +93,20 @@ export const useOrderTracking = (orderId: string | undefined) => {
       }
 
       if (trackingData) {
-        return trackingData as TrackingInfo;
+        // Parse history if it's stored as a string
+        let history = trackingData.history;
+        if (typeof history === 'string') {
+          try {
+            history = JSON.parse(history);
+          } catch (e) {
+            history = [];
+          }
+        }
+
+        return {
+          ...trackingData,
+          history: Array.isArray(history) ? history : []
+        } as TrackingInfo;
       }
 
       if (orderData) {

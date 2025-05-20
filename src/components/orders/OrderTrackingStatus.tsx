@@ -28,17 +28,18 @@ const OrderTrackingStatus: React.FC<OrderTrackingStatusProps> = ({
   currentStatus,
   estimatedDelivery,
 }) => {
+  // Normalize status
   const normalizedStatus = statusMap[currentStatus?.toLowerCase()] || 'processing';
   const currentStatusIndex = statusSteps.findIndex(step => step.key === normalizedStatus);
-  const percentComplete = (currentStatusIndex / (statusSteps.length - 1)) * 100;
+  const percentComplete = ((currentStatusIndex + 1) / statusSteps.length) * 100;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+    <div className="bg-white rounded-lg mb-8">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Delivery Status</h2>
         <div className="text-blue-600 text-right">
           <p className="font-medium">Estimated Delivery</p>
-          <p>{estimatedDelivery}</p>
+          <p>{estimatedDelivery || 'To be confirmed'}</p>
         </div>
       </div>
 
@@ -84,7 +85,7 @@ const OrderTrackingStatus: React.FC<OrderTrackingStatusProps> = ({
       </div>
 
       <div className="mt-4 text-sm font-medium text-blue-700 text-center">
-        Current Status: {statusSteps[currentStatusIndex]?.label}
+        Current Status: {statusSteps[currentStatusIndex]?.label || 'Processing'}
       </div>
     </div>
   );

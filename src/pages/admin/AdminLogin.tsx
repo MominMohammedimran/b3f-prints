@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AdminUser } from '@/lib/types';
 import { DEFAULT_ADMIN_PERMISSIONS } from '@/utils/adminAuth';
 
-// Define a specific type for admin data records from the database
+// Define specific types for admin data records from the database
 interface AdminRecord {
   id: string;
   email: string;
@@ -22,7 +22,7 @@ interface AdminRecord {
   permissions?: string[];
 }
 
-// Use concrete type definition instead of recursive type inference
+// Use concrete type definition
 interface AdminData {
   id: string;
   email: string;
@@ -50,8 +50,8 @@ const AdminLogin = () => {
           const { data, error: adminError } = await supabase
             .from('admin_users')
             .select('*')
-            .eq('id', currentUser.id)
-            .single();
+            .eq('email', currentUser.email)
+            .maybeSingle();
 
           if (adminError) {
             console.error('Error fetching admin data:', adminError);
@@ -118,7 +118,7 @@ const AdminLogin = () => {
         .from('admin_users')
         .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
       if (adminError) {
         console.error("Admin check error:", adminError);
@@ -194,7 +194,6 @@ const AdminLogin = () => {
       setLoading(false);
     }
   };
-
   
   if (admin) {
     return (

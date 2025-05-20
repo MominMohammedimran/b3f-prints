@@ -39,8 +39,17 @@ export const calculateSubtotal = (items: CartItem[]): number => {
  * @param address shipping address object
  * @returns formatted address string
  */
-export const formatAddress = (address: ShippingAddress | undefined): string => {
+export const formatAddress = (address: ShippingAddress | undefined | null): string => {
   if (!address) return 'No shipping address';
+  
+  // Handle the case where address is stored as a JSON string
+  if (typeof address === 'string') {
+    try {
+      address = JSON.parse(address);
+    } catch (e) {
+      return 'Invalid address format';
+    }
+  }
   
   const parts = [
     address.name,
@@ -85,4 +94,72 @@ export const getOrderStatusMessage = (status: string): string => {
     default:
       return 'Order received.';
   }
+};
+
+/**
+ * Parse order items from various formats
+ * @param items order items in various formats
+ * @returns array of CartItem objects
+ */
+export const parseOrderItems = (items: any): CartItem[] => {
+  if (!items) return [];
+  
+  // If items is a string, try to parse it as JSON
+  if (typeof items === 'string') {
+    try {
+      items = JSON.parse(items);
+    } catch (e) {
+      console.error('Failed to parse order items string:', e);
+      return [];
+    }
+  }
+  
+  // Ensure items is an array
+  if (!Array.isArray(items)) {
+    console.error('Order items is not an array:', items);
+    return [];
+  }
+  
+  // Convert each item to CartItem format
+  return items.map(item => ({
+    id: item.id || item.productId || `item-${Math.random().toString(36).substr(2, 9)}`,
+    productId: item.productId || item.id || '',
+    name: item.name || 'Product',
+    price: item.price || 0,
+    quantity: item.quantity || 1,
+    image: item.image || '',
+    size: item.size,
+    color: item.color,
+    options: item.options
+  }));
+};
+
+/**
+ * Format order data to consistent format
+ * @param order The order object
+ * @returns Standardized order object
+ */
+export const normalizeOrderData = (order: any): Order => {
+  if (!order) return {} as Order;
+  
+  return {
+    id: order.id || '',
+    order_number: order.order_number || order.orderNumber || '',
+    orderNumber: order.order_number || order.orderNumber || '',
+    user_id: order.user_id || '',
+    user_email: order.user_email || '',
+    items: parseOrderItems(order.items),
+    total: order.total || 0,
+    status: order.status || 'processing',
+    payment_method: order.payment_method || order.paymentMethod || 'cod',
+    paymentMethod: order.payment_method || order.paymentMethod || 'cod',
+    shipping_address: order.shipping_address || order.shippingAddress || {},
+    shippingAddress: order.shipping_address || order.shippingAddress || {},
+    delivery_fee: order.delivery_fee || order.deliveryFee || 0,
+    deliveryFee: order.delivery_fee || order.deliveryFee || 0,
+    created_at: order.created_at || order.date || new Date().toISOString(),
+    updated_at: order.updated_at || new Date().toISOString(),
+    date: order.date || order.created_at || new Date().toISOString(),
+    cancellation_reason: order.cancellation_reason || ''
+  };
 };

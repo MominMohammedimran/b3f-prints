@@ -43,7 +43,7 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [isTestMode, setIsTestMode] = useState(true);
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
 
   useEffect(() => {
     const loadScript = async () => {
@@ -67,32 +67,24 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
     
     try {
       if (!(window as any).Razorpay) {
-        throw new Error('Razorpay not loaded');
+        await loadRazorpayScript();
+        if (!(window as any).Razorpay) {
+          throw new Error('Razorpay not loaded');
+        }
       }
       
-      const name = currentUser?.user_metadata?.full_name || '';
-      const email = currentUser?.email || '';
-      const phone = currentUser?.user_metadata?.phone || '';
+      const name = userProfile?.display_name || currentUser?.user_metadata?.full_name || '';
+      const email = currentUser?.email || userProfile?.email || '';
+      const phone = userProfile?.phone_number || currentUser?.user_metadata?.phone || '';
       
       // Razorpay options
       const options = {
-        key: "rzp_test_NRItHtK5M0vOd5", // Replace with your actual key in production
+        key: "rzp_test_NRItHtK5M0vOd5", // Test key 
         amount: amount * 100, // Razorpay takes amount in paise
         currency: "INR",
         name: "B3F Prints & Men's Wear",
         description: `Payment for order ${orderId}`,
-        image: "https://your-logo-url.png",
-        handler: (response: any) => {
-          onSuccess({
-            paymentId: response.razorpay_payment_id,
-            orderId: response.razorpay_order_id || orderId,
-            signature: response.razorpay_signature || 'test-signature',
-            amount,
-            currency: 'INR'
-          });
-          toast.success('Payment successful!');
-          setIsLoading(false);
-        },
+        order_id: orderId,
         prefill: {
           name: name || "Customer",
           email: email || "customer@example.com",
@@ -106,7 +98,20 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
             onFailure();
             toast.error('Payment was cancelled');
             setIsLoading(false);
-          }
+          },
+          escape: true,
+          animation: true
+        },
+        handler: function (response: any) {
+          onSuccess({
+            paymentId: response.razorpay_payment_id,
+            orderId: response.razorpay_order_id || orderId,
+            signature: response.razorpay_signature || 'test-signature',
+            amount,
+            currency: 'INR'
+          });
+          toast.success('Payment successful!');
+          setIsLoading(false);
         }
       };
 

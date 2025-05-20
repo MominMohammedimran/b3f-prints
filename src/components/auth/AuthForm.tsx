@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +23,7 @@ import { checkPasswordStrength } from '@/utils/securityUtils';
 type AuthMode = 'signin' | 'signup' | 'otp';
 
 interface AuthFormProps {
-  initialMode?: AuthMode;
+  initialMode?: 'signin' | 'signup';
   redirectTo?: string;
 }
 
@@ -43,10 +44,12 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
     try {
       if (mode === 'signin') {
         const { data, error } = await signIn(email, password);
+        
         if (error) {
           console.error("Sign-in failed:", error.message);
           toast.error(error.message || 'Sign in failed');
-          await handleSendOTP();
+          setLoading(false);
+          return;
         } else {
           toast.success('Sign in successful!');
           navigate(redirectTo);
@@ -70,7 +73,7 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
           toast.error(error.message || 'Sign up failed');
         } else {
           toast.success('Account created! Verification email sent.');
-          await handleSendOTP();
+          setMode('otp');
         }
       }
     } catch (error: any) {

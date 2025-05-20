@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import useOrderData from '../hooks/useOrderData';
 import { formatPrice } from '@/lib/utils';
+import { parseOrderItems, normalizeOrderData } from '@/utils/orderUtils';
 
 const OrderComplete = () => {
   const { orderId } = useParams();
@@ -37,6 +38,10 @@ const OrderComplete = () => {
     );
   }
 
+  // Normalize order data to ensure consistent properties
+  const normalizedOrder = normalizeOrderData(orderData);
+  const orderItems = parseOrderItems(normalizedOrder.items);
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
@@ -66,12 +71,12 @@ const OrderComplete = () => {
           <div className="border-t border-gray-200 pt-4">
             <div className="flex justify-between mb-2">
               <span className="font-medium">Order Number:</span>
-              <span>{orderData.order_number || orderData.orderNumber || orderData.id}</span>
+              <span>{normalizedOrder.order_number || normalizedOrder.id}</span>
             </div>
             <div className="flex justify-between mb-2">
               <span className="font-medium">Date:</span>
               <span>
-                {new Date(orderData.created_at).toLocaleDateString('en-US', {
+                {new Date(normalizedOrder.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -80,12 +85,12 @@ const OrderComplete = () => {
             </div>
             <div className="flex justify-between mb-2">
               <span className="font-medium">Total Amount:</span>
-              <span>{formatPrice(orderData.total)}</span>
+              <span>{formatPrice(normalizedOrder.total)}</span>
             </div>
             <div className="flex justify-between mb-2">
               <span className="font-medium">Payment Method:</span>
               <span>
-                {orderData.payment_method || orderData.paymentMethod || 'Cash on Delivery'}
+                {normalizedOrder.payment_method || 'Cash on Delivery'}
               </span>
             </div>
           </div>
@@ -93,7 +98,7 @@ const OrderComplete = () => {
           <div className="border-t border-gray-200 pt-4 mt-4">
             <h3 className="font-medium text-lg mb-3">Order Items:</h3>
             <div className="space-y-3">
-              {orderData.items.map((item) => (
+              {orderItems.map((item) => (
                 <div key={item.id} className="flex items-center space-x-4">
                   <div className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded overflow-hidden">
                     <img
@@ -119,7 +124,7 @@ const OrderComplete = () => {
 
           <div className="mt-8 flex flex-col sm:flex-row justify-between">
             <Link
-              to={`/track-order/${orderData.id}`}
+              to={`/track-order/${normalizedOrder.id}`}
               className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 mb-3 sm:mb-0 text-center"
             >
               Track Order

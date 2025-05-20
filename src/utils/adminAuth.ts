@@ -49,15 +49,25 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
     
     const email = session.user.email;
     
+    if (!email) {
+      console.error("User email is missing in session");
+      return null;
+    }
+    
     // Query the admin_users table
     const { data, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
       
-    if (error || !data) {
-      console.error("Not an admin user:", error);
+    if (error) {
+      console.error("Admin table query error:", error);
+      return null;
+    }
+    
+    if (!data) {
+      console.error("Not an admin user, no matching record found");
       return null;
     }
 
@@ -103,7 +113,7 @@ export const initializeAdmin = async (userId: string, email: string): Promise<vo
       .from('admin_users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
     
     if (existingAdmin) {
       console.log('Admin already exists', existingAdmin);
@@ -131,5 +141,54 @@ export const initializeAdmin = async (userId: string, email: string): Promise<vo
   } catch (error) {
     console.error('Error initializing admin:', error);
     throw error;
+  }
+};
+
+// Create a specific admin user function for the B3F email
+export const ensureMainAdminExists = async (): Promise<void> => {
+  const adminEmail = 'b3fprintingsolutions@gmail.com';
+  
+  try {
+    // Check if admin exists
+    const { data: existingAdmin, error: checkError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', adminEmail)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('Error checking admin existence:', checkError);
+    }
+    
+    if (!existingAdmin) {
+      // Get the user ID if possible
+      const { data: userData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', adminEmail)
+        .maybeSingle();
+      
+      const userId = userData?.id || 'pending-user-id';
+      
+      // Create the admin
+      const { error: createError } = await supabase
+        .from('admin_users')
+        .insert({
+          email: adminEmail,
+          user_id: userId,
+          role: 'super_admin',
+          permissions: DEFAULT_ADMIN_PERMISSIONS,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (createError) {
+        console.error('Error creating main admin:', createError);
+      } else {
+        console.log('Main admin account created successfully');
+      }
+    }
+  } catch (error) {
+    console.error('Error in ensureMainAdminExists:', error);
   }
 };
