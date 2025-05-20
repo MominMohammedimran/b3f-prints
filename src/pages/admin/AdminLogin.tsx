@@ -10,22 +10,10 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminUser } from '@/lib/types';
 import { DEFAULT_ADMIN_PERMISSIONS } from '@/utils/adminAuth';
-import AdminEmailVerification from '@/components/admin/AdminEmailVerification';
 import OTPValidation from '@/components/auth/OTPValidation';
 
 // Define specific types for admin data records from the database
 interface AdminRecord {
-  id: string;
-  email: string;
-  role?: string;
-  user_id?: string;
-  created_at: string;
-  updated_at?: string;
-  permissions?: string[];
-}
-
-// Use concrete type definition
-interface AdminData {
   id: string;
   email: string;
   role?: string;
@@ -65,8 +53,8 @@ const AdminLogin = () => {
             console.error('Error fetching admin data:', adminError);
             setAdmin(null);
           } else if (data) {
-            // Explicitly cast to our concrete type
-            const adminData = data as AdminData;
+            // Type assertion with our defined interface
+            const adminData = data as AdminRecord;
             
             // Create AdminUser from safe data with fallbacks
             setAdmin({
@@ -196,13 +184,16 @@ const AdminLogin = () => {
             return;
           }
           
+          // Type assertion to ensure proper typing
+          const adminRecord = newAdminData as AdminRecord;
+          
           setAdmin({
-            id: newAdminData.id,
-            email: newAdminData.email,
-            role: newAdminData.role || 'admin',
-            created_at: newAdminData.created_at,
-            user_id: newAdminData.user_id,
-            permissions: newAdminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+            id: adminRecord.id,
+            email: adminRecord.email,
+            role: adminRecord.role || 'admin',
+            created_at: adminRecord.created_at,
+            user_id: adminRecord.user_id || userId,
+            permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
           });
         } else {
           setError('You are not authorized as an admin.');
@@ -213,13 +204,16 @@ const AdminLogin = () => {
           return;
         }
       } else {
+        // Type assertion for the admin data
+        const adminRecord = adminData as AdminRecord;
+        
         setAdmin({
-          id: adminData.id,
-          email: adminData.email,
-          role: adminData.role || 'admin',
-          created_at: adminData.created_at,
-          user_id: adminData.user_id || userId,
-          permissions: adminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+          id: adminRecord.id,
+          email: adminRecord.email,
+          role: adminRecord.role || 'admin',
+          created_at: adminRecord.created_at,
+          user_id: adminRecord.user_id || userId,
+          permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
         });
       }
       
@@ -298,24 +292,29 @@ const AdminLogin = () => {
             return;
           }
           
+          // Type assertion for the new admin record
+          const adminRecord = newAdmin as AdminRecord;
+          
           setAdmin({
-            id: newAdmin.id,
-            email: newAdmin.email,
-            role: newAdmin.role || 'admin',
-            created_at: newAdmin.created_at,
-            user_id: newAdmin.user_id,
-            permissions: newAdmin.permissions || DEFAULT_ADMIN_PERMISSIONS
+            id: adminRecord.id,
+            email: adminRecord.email,
+            role: adminRecord.role || 'admin',
+            created_at: adminRecord.created_at,
+            user_id: adminRecord.user_id || userId,
+            permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
           });
         } else {
-          // Admin record exists
+          // Admin record exists - use type assertion
+          const adminRecord = adminData as AdminRecord;
+          
           setAdmin({
-            id: adminData.id,
-            email: adminData.email,
-            role: adminData.role || 'admin',
-            created_at: adminData.created_at,
-            updated_at: adminData.updated_at,
-            user_id: adminData.user_id || userId,
-            permissions: adminData.permissions || DEFAULT_ADMIN_PERMISSIONS
+            id: adminRecord.id,
+            email: adminRecord.email,
+            role: adminRecord.role || 'admin',
+            created_at: adminRecord.created_at,
+            updated_at: adminRecord.updated_at,
+            user_id: adminRecord.user_id || userId,
+            permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
           });
         }
         
@@ -361,8 +360,8 @@ const AdminLogin = () => {
         return;
       }
 
-      // Explicitly cast to our concrete type
-      const adminRecord = adminData as AdminData;
+      // Type assertion for the admin record
+      const adminRecord = adminData as AdminRecord;
       
       // Successfully found admin record
       console.log("Admin record found:", adminRecord);
