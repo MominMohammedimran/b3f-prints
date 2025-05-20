@@ -28,10 +28,16 @@ const OrderTrackingStatus: React.FC<OrderTrackingStatusProps> = ({
   currentStatus,
   estimatedDelivery,
 }) => {
-  // Normalize status
-  const normalizedStatus = statusMap[currentStatus?.toLowerCase()] || 'processing';
+  // Normalize status - default to processing if invalid status provided
+  const normalizedStatus = (currentStatus && statusMap[currentStatus.toLowerCase()]) || 'processing';
+  
+  // Find the index of the current status in our steps
   const currentStatusIndex = statusSteps.findIndex(step => step.key === normalizedStatus);
-  const percentComplete = ((currentStatusIndex + 1) / statusSteps.length) * 100;
+  
+  // Calculate progress percentage (handle -1 case if status not found)
+  const percentComplete = currentStatusIndex >= 0 
+    ? ((currentStatusIndex + 1) / statusSteps.length) * 100
+    : 0;
 
   return (
     <div className="bg-white rounded-lg mb-8">
@@ -85,7 +91,7 @@ const OrderTrackingStatus: React.FC<OrderTrackingStatusProps> = ({
       </div>
 
       <div className="mt-4 text-sm font-medium text-blue-700 text-center">
-        Current Status: {statusSteps[currentStatusIndex]?.label || 'Processing'}
+        Current Status: {currentStatusIndex >= 0 ? statusSteps[currentStatusIndex]?.label : 'Processing'}
       </div>
     </div>
   );

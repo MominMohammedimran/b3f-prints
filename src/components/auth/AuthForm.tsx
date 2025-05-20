@@ -43,14 +43,25 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
     
     try {
       if (mode === 'signin') {
+        // Check if email and password are provided
+        if (!email || !password) {
+          toast.error('Please enter both email and password');
+          setLoading(false);
+          return;
+        }
+        
+        // Attempt to sign in with provided credentials
         const { data, error } = await signIn(email, password);
         
         if (error) {
           console.error("Sign-in failed:", error.message);
-          toast.error(error.message || 'Sign in failed');
+          toast.error(error.message || 'Sign in failed. Please check your credentials.');
           setLoading(false);
           return;
-        } else {
+        } 
+        
+        // If login is successful
+        if (data) {
           toast.success('Sign in successful!');
           navigate(redirectTo);
         }
@@ -71,6 +82,8 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
         const { data, error } = await signUp(email, password);
         if (error) {
           toast.error(error.message || 'Sign up failed');
+          setLoading(false);
+          return;
         } else {
           toast.success('Account created! Verification email sent.');
           setMode('otp');

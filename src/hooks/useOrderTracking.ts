@@ -90,6 +90,7 @@ export const useOrderTracking = (orderId: string | undefined) => {
 
       if (trackingError) {
         console.error('Tracking fetch error:', trackingError);
+        // Continue to fallback on order data
       }
 
       if (trackingData) {
@@ -115,8 +116,10 @@ export const useOrderTracking = (orderId: string | undefined) => {
         const createdAt = new Date(orderData.created_at);
         const updatedAt = new Date(orderData.updated_at || today);
 
-        const history = [];
+        // Default to processing if status is undefined
         const orderStatus = orderData.status?.toLowerCase() || 'processing';
+
+        const history = [];
 
         // Always add processing status
         history.push({
@@ -186,7 +189,8 @@ export const useOrderTracking = (orderId: string | undefined) => {
   const {
     data: tracking,
     isLoading,
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: ['tracking', orderId],
     queryFn: fetchTracking,
@@ -195,5 +199,10 @@ export const useOrderTracking = (orderId: string | undefined) => {
     retry: 1
   });
 
-  return { tracking, loading: isLoading, error };
+  return { 
+    tracking, 
+    loading: isLoading, 
+    error,
+    refetch 
+  };
 };
