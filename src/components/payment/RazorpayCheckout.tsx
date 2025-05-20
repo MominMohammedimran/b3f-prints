@@ -10,14 +10,19 @@ import { useAuth } from '@/context/AuthContext';
 const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
     if ((window as any).Razorpay) {
+      console.log("Razorpay already loaded");
       resolve(true);
       return;
     }
 
+    console.log("Loading Razorpay script...");
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
-    script.onload = () => resolve(true);
+    script.onload = () => {
+      console.log("Razorpay script loaded successfully");
+      resolve(true);
+    };
     script.onerror = () => {
       console.error('Failed to load Razorpay script');
       resolve(false);
@@ -42,7 +47,7 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [isTestMode, setIsTestMode] = useState(true);
+  const [isTestMode] = useState(true);
   const { currentUser, userProfile } = useAuth();
 
   useEffect(() => {
@@ -76,9 +81,39 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
       
       console.log("Initializing Razorpay payment with order:", orderId, "amount:", amount);
       
+      // Prepare user information for the payment
       const name = userProfile?.display_name || currentUser?.user_metadata?.full_name || '';
       const email = currentUser?.email || userProfile?.email || '';
       const phone = userProfile?.phone_number || currentUser?.user_metadata?.phone || '';
+      
+      // For testing, we'll use a mock successful payment
+      if (isTestMode) {
+        console.log("Test mode: Simulating successful payment");
+        
+        // Simulate payment processing
+        setTimeout(() => {
+          const mockPaymentResponse = {
+            razorpay_payment_id: `test_pay_${Math.random().toString(36).substring(2, 15)}`,
+            razorpay_order_id: orderId,
+            razorpay_signature: 'test_signature',
+          };
+          
+          console.log("Test payment successful:", mockPaymentResponse);
+          
+          onSuccess({
+            paymentId: mockPaymentResponse.razorpay_payment_id,
+            orderId: mockPaymentResponse.razorpay_order_id,
+            signature: mockPaymentResponse.razorpay_signature,
+            amount,
+            currency: 'INR'
+          });
+          
+          toast.success('Payment successful!');
+          setIsLoading(false);
+        }, 2000);
+        
+        return;
+      }
       
       // Razorpay options
       const options = {

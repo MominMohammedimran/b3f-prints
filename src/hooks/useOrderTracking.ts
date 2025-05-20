@@ -73,7 +73,8 @@ export const useOrderTracking = (orderId: string | undefined) => {
     try {
       console.log('Fetching tracking data for order:', orderId);
       
-      const { data: orderData, error: orderError } = await supabase
+      // First try to find order by ID
+      let { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
@@ -84,9 +85,9 @@ export const useOrderTracking = (orderId: string | undefined) => {
         return generateMockTrackingData(orderId);
       }
       
+      // If no order found by ID, try by order_number
       if (!orderData) {
         console.log('No order data found, checking by order_number');
-        // Try to fetch by order_number instead
         const { data: orderByNumber, error: numberError } = await supabase
           .from('orders')
           .select('*')
@@ -98,6 +99,7 @@ export const useOrderTracking = (orderId: string | undefined) => {
           return generateMockTrackingData(orderId);
         }
         
+        // Use the order found by order_number
         orderData = orderByNumber;
       }
 

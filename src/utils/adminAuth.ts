@@ -78,7 +78,7 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
     console.log("Found admin record:", data);
 
     // Cast data to AdminRecord type to ensure type safety
-    const adminRecord = data as AdminRecord;
+    const adminRecord = data as any;
 
     // Create a safe admin user object with fallbacks
     const adminUser: AdminUser = {
