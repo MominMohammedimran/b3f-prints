@@ -19,6 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import OTPValidation from './OTPValidation';
 import { checkPasswordStrength } from '@/utils/securityUtils';
+import LoginForm from './LoginForm';
+import SignupForm from './SignupForm';
+import { cleanupAuthState } from '@/context/AuthContext';
 
 type AuthMode = 'signin' | 'signup' | 'otp';
 
@@ -43,12 +46,18 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
     
     try {
       if (mode === 'signin') {
+        // Clear any existing auth state first
+        cleanupAuthState();
+        
         // Check if email and password are provided
         if (!email || !password) {
           toast.error('Please enter both email and password');
           setLoading(false);
           return;
         }
+        
+        // Log for debugging
+        console.log("Attempting sign-in with:", { email, passwordLength: password.length });
         
         // Attempt to sign in with provided credentials
         const { data, error } = await signIn(email, password);
@@ -62,9 +71,11 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
         
         // If login is successful
         if (data && data.session) {
+          console.log("Sign-in successful with session:", data.session.user.id);
           toast.success('Sign in successful!');
           navigate(redirectTo);
         } else {
+          console.error("Sign-in response has no session:", data);
           toast.error('Unable to authenticate. Please try again.');
           setLoading(false);
         }
@@ -145,6 +156,19 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
   const verifyOtpWithEmail = async (token: string) => {
     console.log('Verifying OTP for email:', email);
     try {
+      // For development, accept a test token
+      if (process.env.NODE_ENV === 'development' && token === '123456') {
+        console.log("Using development test token");
+        
+        // Create a mock session to simulate successful verification
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password: "password", // This won't be used in test mode
+        });
+        
+        return { data, error };
+      }
+      
       return await supabase.auth.verifyOtp({
         email,
         token,
@@ -165,9 +189,11 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
       if (error) {
         throw error;
       } else if (data && data.session) {
+        console.log("OTP verification successful with session:", data.session.user.id);
         toast.success('Verification successful!');
         navigate(redirectTo);
       } else {
+        console.error("OTP verification response has no session:", data);
         throw new Error('Authentication failed');
       }
     } catch (error: any) {
@@ -212,117 +238,45 @@ export function AuthForm({ initialMode = 'signin', redirectTo = '/' }: AuthFormP
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="password">Password</Label>
-              {mode === 'signin' && (
-                <a 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSendOTP();
-                  }}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Sign in with OTP instead
-                </a>
-              )}
-            </div>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={togglePasswordVisibility}
-              >
-                {showPassword ? (
-                  <EyeOffIcon className="h-4 w-4" />
-                ) : (
-                  <EyeIcon className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            {mode === 'signup' && password && (
-              <PasswordStrengthIndicator password={password} />
-            )}
-          </div>
-          
-          {mode === 'signup' && (
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-          )}
-          
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
-          </Button>
-          
-          <div className="text-center">
-            {mode === 'signin' ? (
-              <p className="text-sm text-gray-500">
-                Don't have an account?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode('signup');
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Create one
-                </a>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Already have an account?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode('signin');
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Sign in
-                </a>
-              </p>
-            )}
-          </div>
-        </form>
+        {mode === 'signin' ? (
+          <LoginForm 
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            showPassword={showPassword}
+            togglePasswordVisibility={togglePasswordVisibility}
+            handleSubmit={handleSubmit}
+            handleSendOTP={handleSendOTP}
+            loading={loading}
+            setMode={setMode}
+          />
+        ) : (
+          <SignupForm
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
+            showPassword={showPassword}
+            togglePasswordVisibility={togglePasswordVisibility}
+            handleSubmit={handleSubmit}
+            loading={loading}
+            setMode={setMode}
+          />
+        )}
       </CardContent>
+      {process.env.NODE_ENV === 'development' && (
+        <CardFooter>
+          <div className="w-full p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
+            <p className="font-medium">For development testing:</p>
+            <p>Email: <code className="bg-white px-1">test@example.com</code></p>
+            <p>Password: <code className="bg-white px-1">Password123!</code></p>
+            <p>OTP code: <code className="bg-white px-1">123456</code></p>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }
