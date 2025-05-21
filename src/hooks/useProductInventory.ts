@@ -33,10 +33,12 @@ export const useProductInventory = () => {
       // Only process data if it exists
       if (data && Array.isArray(data)) {
         data.forEach(product => {
-          // Safely access properties with type checks
+          // Safely access properties with type checks and null checks
+          if (!product) return;
+          
           // Determine product type from category or name
           let productType = '';
-          if (product && typeof product === 'object') {
+          if (typeof product === 'object') {
             if ('name' in product && product.name && typeof product.name === 'string') {
               const name = product.name.toLowerCase();
               if (name.includes('tshirt') || name.includes('t-shirt')) {
