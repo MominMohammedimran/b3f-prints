@@ -33,18 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <LocationProvider>
-            <MicroservicesProvider>
-             
-                <CartProvider>
-                  <App />
-                  <Toaster position="top-center" offset={12} richColors closeButton />
-                </CartProvider>
-             
-            </MicroservicesProvider>
-          </LocationProvider>
-        </AuthProvider>
+        <App />
       </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>,
