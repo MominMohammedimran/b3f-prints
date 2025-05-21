@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,12 +50,10 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         return;
       }
       
-      // Check if data exists, is an object, and has an inventory property
-      if (data && typeof data === 'object' && data.inventory) {
+      if (data?.inventory) {
         // If inventory exists in database, use it
         const items: InventoryItem[] = [];
-        const inventory = data.inventory as Record<string, number>;
-        for (const [size, quantity] of Object.entries(inventory)) {
+        for (const [size, quantity] of Object.entries(data.inventory)) {
           items.push({ size, quantity: Number(quantity) });
         }
         setInventory(items);
