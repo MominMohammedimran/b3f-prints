@@ -33,34 +33,37 @@ export const useProductInventory = () => {
       // Only process data if it exists
       if (data && Array.isArray(data)) {
         data.forEach(product => {
+          // Safely access properties with type checks
           // Determine product type from category or name
           let productType = '';
-          if (product.name && typeof product.name === 'string') {
-            const name = product.name.toLowerCase();
-            if (name.includes('tshirt') || name.includes('t-shirt')) {
-              productType = 'tshirt';
-            } else if (name.includes('mug')) {
-              productType = 'mug';
-            } else if (name.includes('cap')) {
-              productType = 'cap';
+          if (product && typeof product === 'object') {
+            if ('name' in product && product.name && typeof product.name === 'string') {
+              const name = product.name.toLowerCase();
+              if (name.includes('tshirt') || name.includes('t-shirt')) {
+                productType = 'tshirt';
+              } else if (name.includes('mug')) {
+                productType = 'mug';
+              } else if (name.includes('cap')) {
+                productType = 'cap';
+              }
             }
-          }
-          
-          // If category is available, use it instead
-          if (product.category && typeof product.category === 'string') {
-            const category = product.category.toLowerCase();
-            if (category.includes('tshirt') || category.includes('t-shirt')) {
-              productType = 'tshirt';
-            } else if (category.includes('mug')) {
-              productType = 'mug';
-            } else if (category.includes('cap')) {
-              productType = 'cap';
+            
+            // If category is available, use it instead
+            if ('category' in product && product.category && typeof product.category === 'string') {
+              const category = product.category.toLowerCase();
+              if (category.includes('tshirt') || category.includes('t-shirt')) {
+                productType = 'tshirt';
+              } else if (category.includes('mug')) {
+                productType = 'mug';
+              } else if (category.includes('cap')) {
+                productType = 'cap';
+              }
             }
-          }
-          
-          // If we have a product type and inventory data, store it
-          if (productType && product.inventory && typeof product.inventory === 'object') {
-            inventoryData[productType] = product.inventory;
+            
+            // If we have a product type and inventory data, store it
+            if (productType && 'inventory' in product && product.inventory && typeof product.inventory === 'object') {
+              inventoryData[productType] = product.inventory as Record<string, number>;
+            }
           }
         });
       }
@@ -98,11 +101,14 @@ export const useProductInventory = () => {
       // Update all products of this type
       if (products && products.length > 0) {
         for (const product of products) {
-          // Skip products without id
-          if (!product.id) continue;
+          // Skip products without id or that aren't valid objects
+          if (!product || typeof product !== 'object' || !('id' in product) || !product.id) continue;
           
           // Get current inventory or initialize empty object
-          const currentInventory = (product.inventory as Record<string, number>) || {};
+          const currentInventory = ('inventory' in product && product.inventory) 
+            ? (product.inventory as Record<string, number>) 
+            : {};
+            
           const updatedInventory = { ...currentInventory, [size]: newQuantity };
           
           const { error: updateError } = await supabase

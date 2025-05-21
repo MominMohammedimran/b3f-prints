@@ -51,11 +51,11 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         return;
       }
       
-      // Check if data exists and has an inventory property
-      if (data && data.inventory) {
+      // Check if data exists, is an object, and has an inventory property
+      if (data && typeof data === 'object' && 'inventory' in data && data.inventory) {
         // If inventory exists in database, use it
         const items: InventoryItem[] = [];
-        for (const [size, quantity] of Object.entries(data.inventory)) {
+        for (const [size, quantity] of Object.entries(data.inventory as Record<string, number>)) {
           items.push({ size, quantity: Number(quantity) });
         }
         setInventory(items);
