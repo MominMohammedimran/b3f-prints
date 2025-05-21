@@ -83,7 +83,7 @@ const Payment = () => {
       const paymentService = new PaymentService(supabase);
       const estimatedDelivery = calculateEstimatedDelivery(new Date());
       
-      // Process the payment through our service
+      // Process the payment through our service - remove user_email if it's causing problems
       const result = await paymentService.processPayment(
         currentUser.id,
         currentUser.email || '',
@@ -160,7 +160,7 @@ const Payment = () => {
       const paymentService = new PaymentService(supabase);
       const estimatedDelivery = calculateEstimatedDelivery(new Date());
       
-      // Process the payment through our service
+      // Process the payment through our service - only include fields that exist in database
       const result = await paymentService.processPayment(
         currentUser.id,
         currentUser.email || '',

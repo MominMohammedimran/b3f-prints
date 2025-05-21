@@ -1,6 +1,4 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { AdminUser } from "@/lib/types";
 
 export const DEFAULT_ADMIN_PERMISSIONS = [
   "products.create",
@@ -22,12 +20,12 @@ export const isAdminSessionValid = async (): Promise<boolean> => {
   return !!adminUser;
 };
 
-export const getAdminSession = async (): Promise<AdminUser | null> => {
+export const getAdminSession = async () => {
   return await validateAdminSession();
 };
 
-// Define a concrete type for admin data from database to avoid recursive type inference
-interface AdminRecord {
+// Define a concrete type for admin data
+export interface AdminUser {
   id: string;
   email: string;
   role?: string;
@@ -77,18 +75,15 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
 
     console.log("Found admin record:", data);
 
-    // Cast data to AdminRecord type to ensure type safety
-    const adminRecord = data as any;
-
     // Create a safe admin user object with fallbacks
     const adminUser: AdminUser = {
-      id: adminRecord.id || '',
-      email: adminRecord.email || email || '',
-      role: adminRecord.role || 'admin',
-      created_at: adminRecord.created_at || new Date().toISOString(),
-      updated_at: adminRecord.updated_at || undefined,
-      user_id: adminRecord.user_id || session.user.id || '',
-      permissions: adminRecord.permissions || DEFAULT_ADMIN_PERMISSIONS
+      id: data.id || '',
+      email: data.email || email || '',
+      role: data.role || 'admin',
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || undefined,
+      user_id: data.user_id || session.user.id || '',
+      permissions: data.permissions || DEFAULT_ADMIN_PERMISSIONS
     };
 
     return adminUser;
@@ -98,7 +93,6 @@ export const validateAdminSession = async (): Promise<AdminUser | null> => {
   }
 };
 
-// Add the missing functions for admin authentication
 export const isAdminAuthenticated = async (): Promise<boolean> => {
   try {
     const isValid = await isAdminSessionValid();
@@ -110,7 +104,7 @@ export const isAdminAuthenticated = async (): Promise<boolean> => {
   }
 };
 
-export const getAdminDetails = async (): Promise<AdminUser | null> => {
+export const getAdminDetails = async () => {
   return await getAdminSession();
 };
 

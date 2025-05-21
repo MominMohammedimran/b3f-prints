@@ -195,20 +195,18 @@ const Checkout = () => {
       
       setCurrentOrder(orderData);
       
-      // Create order in database
+      // Create order in database - only include columns that exist in the database
       const { data, error } = await supabase
         .from('orders')
         .insert({
           user_id: currentUser.id,
-          user_email: currentUser.email,
           order_number: orderNumber,
           total: totalPrice + DELIVERY_FEE,
           delivery_fee: DELIVERY_FEE,
           items: serializedItems,
           status: 'pending',
           created_at: new Date().toISOString(),
-          payment_method: 'pending',
-          payment_details: { status: 'pending' }
+          payment_method: 'pending'
         })
         .select()
         .single();
