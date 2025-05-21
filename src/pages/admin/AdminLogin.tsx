@@ -130,11 +130,14 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
-        // Update user_id if not set
-        if (!admin.user_id && data.user.id) {
+        // Update user_id if not set - use a separate variable for the update
+        if (data.user.id) {
+          // Create an object that matches the expected type for the update
+          const updateData = { user_id: data.user.id };
+          
           const { error: updateError } = await supabase
             .from('admin_users')
-            .update({ user_id: data.user.id })
+            .update(updateData)
             .eq('id', admin.id);
             
           if (updateError) {

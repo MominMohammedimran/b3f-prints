@@ -36,8 +36,8 @@ const AdminSignUpForm = () => {
     
     // Check password strength
     const strengthResult = checkPasswordStrength(password);
-    if (strengthResult.strength === 'weak') {
-      toast.error(strengthResult.message);
+    if (strengthResult.score <= 1) {
+      toast.error(strengthResult.feedback);
       return;
     }
     
