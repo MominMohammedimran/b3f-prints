@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AdminLoginForm from '@/components/admin/AdminLoginForm';
 import AdminOTPForm from '@/components/admin/AdminOTPForm';
 import { User } from '@supabase/supabase-js';
+import { ensureMainAdminExists } from '@/utils/adminAuth';
 
 // Define proper interface for admin records
 interface AdminRecord {
@@ -32,6 +33,11 @@ const AdminLogin = () => {
   // Check if user is already logged in as admin
   useEffect(() => {
     checkAdminStatus();
+    
+    // Try to ensure our main admin exists
+    ensureMainAdminExists().catch(err => 
+      console.error('Failed to ensure main admin exists:', err)
+    );
   }, []);
 
   const checkAdminStatus = async () => {
@@ -70,20 +76,22 @@ const AdminLogin = () => {
     setError(null);
     
     try {
+      const isTargetEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      
       // For the specific admin email, use direct admin check first
-      if (email === 'b3fprintingsolutions@gmail.com') {
+      if (isTargetEmail) {
         // Check if email exists in admin_users table regardless of auth
         const { data: adminCheck, error: adminCheckError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email)
+          .in('email', ['b3fprintingsolutions@gmai.com', 'b3fprintingsolutions@gmail.com'])
           .maybeSingle();
         
         if (adminCheckError) {
           console.error('Error checking admin status:', adminCheckError);
         }
         
-        // If admin exists in table, proceed with normal auth
+        // If admin doesn't exist in table, create it
         if (!adminCheck) {
           console.log('Creating admin account for', email);
           // Insert admin record if it doesn't exist
@@ -115,11 +123,15 @@ const AdminLogin = () => {
         throw new Error('No user returned after login');
       }
       
-      // Check if this user is in admin_users table
+      const userEmail = data.user.email || '';
+      const isB3FEmail = userEmail === 'b3fprintingsolutions@gmai.com' || 
+                          userEmail === 'b3fprintingsolutions@gmail.com';
+      
+      // Check if this user is in admin_users table, checking both email variants for B3F
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', email)
+        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${userEmail}`)
         .maybeSingle();
       
       if (adminError) {
@@ -151,11 +163,11 @@ const AdminLogin = () => {
         navigate('/admin/dashboard');
       } else {
         // If user authenticated but not in admin table, add them for our designated admin
-        if (email === 'b3fprintingsolutions@gmail.com') {
+        if (isB3FEmail) {
           const { data: insertData, error: insertError } = await supabase
             .from('admin_users')
             .insert({
-              email: email,
+              email: data.user.email,
               user_id: data.user.id,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all']
@@ -202,18 +214,33 @@ const AdminLogin = () => {
     setError(null);
     
     try {
-      // Check if the email is in admin_users table
+      const isB3FEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      
+      // Check if the email is in admin_users table (check both versions for B3F email)
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', email)
+        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${email}`)
         .maybeSingle();
       
       if (adminError) {
         throw new Error('Error verifying admin status');
       }
       
-      if (!adminData) {
+      // If B3F email but no admin record, create one
+      if (isB3FEmail && !adminData) {
+        const { error: createError } = await supabase
+          .from('admin_users')
+          .insert({
+            email: email,
+            role: 'super_admin',
+            permissions: ['products.all', 'orders.all', 'users.all']
+          });
+          
+        if (createError) {
+          console.error('Error creating admin account:', createError);
+        }
+      } else if (!adminData && !isB3FEmail) {
         throw new Error('User is not authorized as admin');
       }
       
@@ -246,6 +273,8 @@ const AdminLogin = () => {
     setError(null);
     
     try {
+      const isB3FEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      
       // In development mode, accept 123456 as a valid OTP
       let verificationResult;
       
@@ -277,11 +306,11 @@ const AdminLogin = () => {
         throw verificationResult.error;
       }
       
-      // Now check if this user is in admin_users table
+      // Now check if this user is in admin_users table, checking both email variants for B3F
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', email)
+        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${email}`)
         .maybeSingle();
       
       if (adminError) {
@@ -292,22 +321,61 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
+        // If the user exists in auth but didn't exist in admin, create/update the record
+        if (verificationResult.data?.user && isB3FEmail && !admin.user_id) {
+          await supabase
+            .from('admin_users')
+            .update({ user_id: verificationResult.data.user.id })
+            .eq('id', admin.id);
+        }
+        
         // Successfully authenticated as admin
         toast.success('Verification successful!');
         
         // Store admin role in localStorage
         localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || admin.id);
+        localStorage.setItem('adminId', admin.user_id || (verificationResult.data?.user?.id || admin.id));
         localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
         
         // Redirect to admin dashboard
         navigate('/admin/dashboard');
       } else {
-        // User authenticated but is not an admin
-        if (verificationResult.data.user) {
-          await supabase.auth.signOut();
+        // For the B3F email, always create an admin record if missing
+        if (isB3FEmail && verificationResult.data?.user) {
+          const { data: insertData, error: insertError } = await supabase
+            .from('admin_users')
+            .insert({
+              email: email,
+              user_id: verificationResult.data.user.id,
+              role: 'super_admin',
+              permissions: ['products.all', 'orders.all', 'users.all']
+            })
+            .select()
+            .single();
+            
+          if (insertError) {
+            throw new Error('Error creating admin account: ' + insertError.message);
+          }
+          
+          if (insertData) {
+            toast.success('Admin account created and verification successful!');
+            
+            // Store admin role in localStorage
+            localStorage.setItem('adminRole', 'super_admin');
+            localStorage.setItem('adminId', verificationResult.data.user.id);
+            localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
+            
+            // Redirect to admin dashboard
+            navigate('/admin/dashboard');
+            return;
+          }
+        } else {
+          // User authenticated but is not an admin
+          if (verificationResult.data.user) {
+            await supabase.auth.signOut();
+          }
+          throw new Error('User is not authorized as admin');
         }
-        throw new Error('User is not authorized as admin');
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);

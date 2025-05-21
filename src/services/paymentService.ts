@@ -5,12 +5,20 @@ import { serializeCartItems } from '@/utils/orderUtils';
 import { CartItem } from '@/lib/types'; // Import the correct CartItem type
 
 interface ShippingAddress {
-  name: string;
-  street: string;
+  name?: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  street?: string;
+  addressLine1?: string;
   city: string;
   state: string;
-  zipCode: string;
+  zipCode?: string;
+  postalCode?: string;
+  zipcode?: string;
   country: string;
+  phone?: string;
+  email?: string;
 }
 
 /**
@@ -50,6 +58,18 @@ export class PaymentService {
       // Serialize the cart items for storage
       const serializedItems = serializeCartItems(validatedCartItems);
       
+      // Normalize shipping address to ensure consistent property names
+      const normalizedAddress = {
+        name: shippingAddress.fullName || `${shippingAddress.firstName || ''} ${shippingAddress.lastName || ''}`.trim() || shippingAddress.name,
+        street: shippingAddress.addressLine1 || shippingAddress.street || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        zipcode: shippingAddress.zipCode || shippingAddress.postalCode || shippingAddress.zipcode || '',
+        country: shippingAddress.country || 'India',
+        phone: shippingAddress.phone || '',
+        email: shippingAddress.email || userEmail
+      };
+      
       // Create the basic payment details object
       const paymentDetails = {
         method: paymentMethod,
@@ -58,7 +78,7 @@ export class PaymentService {
       };
       
       console.log('Creating order with payment details:', paymentDetails);
-      console.log('Shipping address:', shippingAddress);
+      console.log('Shipping address:', normalizedAddress);
       
       // Create the order in the database
       const { data, error } = await this.supabase
@@ -70,7 +90,7 @@ export class PaymentService {
           total: totalAmount,
           status: 'order_placed',
           payment_method: paymentMethod,
-          shipping_address: shippingAddress,
+          shipping_address: normalizedAddress,
           delivery_fee: deliveryFee,
           items: serializedItems,
           payment_details: paymentDetails,
@@ -126,7 +146,8 @@ export class PaymentService {
       return data;
     } catch (error) {
       console.error('Error creating order tracking:', error);
-      throw error;
+      // Don't throw here, just return null so the main process can continue
+      return null;
     }
   }
   
@@ -148,6 +169,20 @@ export class PaymentService {
     try {
       console.log('Processing payment with method:', paymentMethod);
       
+      if (!userId || !userEmail) {
+        return {
+          success: false,
+          error: 'User information is missing'
+        };
+      }
+      
+      if (!cartItems || cartItems.length === 0) {
+        return {
+          success: false, 
+          error: 'No items in cart'
+        };
+      }
+      
       // Ensure all cart items have required id property
       const validatedCartItems: CartItem[] = cartItems.map(item => ({
         ...item,
@@ -155,24 +190,41 @@ export class PaymentService {
       }));
       
       // Create order with basic payment details
-      const orderData = await this.createOrder(
-        userId,
-        userEmail,
-        orderNumber,
-        totalAmount,
-        deliveryFee,
-        validatedCartItems,
-        shippingAddress,
-        paymentMethod
-      );
+      let orderData;
+      try {
+        orderData = await this.createOrder(
+          userId,
+          userEmail,
+          orderNumber,
+          totalAmount,
+          deliveryFee,
+          validatedCartItems,
+          shippingAddress,
+          paymentMethod
+        );
+      } catch (orderError: any) {
+        console.error('Failed to create order:', orderError);
+        return {
+          success: false,
+          error: orderError.message || 'Failed to create order in database'
+        };
+      }
       
       if (!orderData) {
-        throw new Error('Failed to create order');
+        return {
+          success: false,
+          error: 'Failed to create order'
+        };
       }
       
       // If we have additional payment details (like from Razorpay), update them
       if (Object.keys(paymentDetails).length > 0 && paymentMethod === 'razorpay') {
-        await this.updatePaymentDetails(orderData.id, paymentDetails);
+        try {
+          await this.updatePaymentDetails(orderData.id, paymentDetails);
+        } catch (paymentError) {
+          console.error('Error updating payment details:', paymentError);
+          // Continue even if payment details update fails
+        }
       }
       
       // Try to create order tracking
@@ -188,7 +240,7 @@ export class PaymentService {
         orderId: orderData.id,
         orderNumber: orderNumber
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment processing failed:', error);
       toast.error('Payment processing failed. Please try again.');
       return {

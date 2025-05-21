@@ -1,123 +1,174 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-export const useProductInventory = () => {
-  const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({});
-  const [loading, setLoading] = useState(false);
+interface InventoryData {
+  quantities: Record<string, number>;
+  product_type?: string;
+  [key: string]: any;
+}
 
-  const fetchProductInventory = useCallback(async () => {
+interface UseProductInventoryReturn {
+  inventory: InventoryData | null;
+  loading: boolean;
+  error: string | null;
+  fetchInventory: () => Promise<void>;
+  updateInventory: (data: Partial<InventoryData>) => Promise<void>;
+}
+
+export const useProductInventory = (productId?: string): UseProductInventoryReturn => {
+  const [inventory, setInventory] = useState<InventoryData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInventory = async (): Promise<void> => {
+    if (!productId) {
+      setInventory({ quantities: {} });
+      return;
+    }
+
     try {
       setLoading(true);
-      // Get inventory data from the database for all products
-      const { data, error } = await supabase
+      setError(null);
+
+      // Fetch product data to get inventory information
+      const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, name, product_type, inventory');
-      
-      if (error) {
-        throw error;
+        .select('*')
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (productError) {
+        throw new Error(`Error fetching product: ${productError.message}`);
       }
-      
-      // Format the inventory data
-      const inventoryData: Record<string, Record<string, number>> = {};
-      data?.forEach(product => {
-        const productType = product.product_type || '';
-        if (!product.inventory) {
-          // Default inventory if none exists
-          switch (productType.toLowerCase()) {
-            case 'tshirt':
-              inventoryData[productType] = { S: 10, M: 15, L: 8, XL: 5 };
-              break;
-            case 'mug':
-              inventoryData[productType] = { Standard: 20 };
-              break;
-            case 'cap':
-              inventoryData[productType] = { Standard: 12 };
-              break;
-            default:
-              inventoryData[productType] = { Standard: 10 };
+
+      // Handle case where product doesn't exist or inventory is null
+      if (!product) {
+        setInventory({ quantities: {} });
+        return;
+      }
+
+      // Extract inventory data with fallback
+      const inventoryData: InventoryData = {
+        quantities: {},
+        product_type: product.product_type || ''
+      };
+
+      // If product has inventory field, parse it
+      if (product.inventory) {
+        try {
+          // If inventory is a string, parse it
+          if (typeof product.inventory === 'string') {
+            const parsedInventory = JSON.parse(product.inventory);
+            inventoryData.quantities = parsedInventory.quantities || {};
+          } 
+          // If inventory is an object
+          else if (typeof product.inventory === 'object') {
+            inventoryData.quantities = product.inventory.quantities || {};
           }
-        } else {
-          inventoryData[productType] = product.inventory;
+        } catch (parseError) {
+          console.error('Error parsing inventory:', parseError);
+          inventoryData.quantities = {};
         }
-      });
-      
-      setSizeInventory(inventoryData);
+      }
+
+      setInventory(inventoryData);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching inventory';
+      setError(errorMessage);
       console.error('Error fetching inventory:', err);
-      // Fallback to default data
-      setSizeInventory({
-        tshirt: { S: 10, M: 15, L: 8, XL: 5 },
-        mug: { Standard: 20 },
-        cap: { Standard: 12 }
-      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // Use this for initial load
-  useEffect(() => {
-    fetchProductInventory();
-  }, [fetchProductInventory]);
+  const updateInventory = async (data: Partial<InventoryData>): Promise<void> => {
+    if (!productId) {
+      toast.error('Cannot update inventory: Product ID is missing');
+      return;
+    }
 
-  const updateInventory = async (productType: string, size: string, change: number) => {
     try {
-      // Calculate the new quantity
-      const currentQuantity = sizeInventory[productType]?.[size] || 0;
-      const newQuantity = Math.max(0, currentQuantity + change); // Ensure non-negative
-      
-      // Get products of this type
-      const { data: products, error: productsError } = await supabase
+      setLoading(true);
+      setError(null);
+
+      // Get current product data
+      const { data: product, error: fetchError } = await supabase
         .from('products')
-        .select('id, inventory')
-        .eq('product_type', productType);
-        
-      if (productsError) {
-        throw productsError;
+        .select('*')
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw new Error(`Error fetching product: ${fetchError.message}`);
       }
-      
-      // Update all products of this type
-      if (products && products.length > 0) {
-        for (const product of products) {
-          const currentInventory = product.inventory || {};
-          const updatedInventory = { ...currentInventory, [size]: newQuantity };
-          
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ inventory: updatedInventory })
-            .eq('id', product.id);
-            
-          if (updateError) {
-            console.error(`Error updating inventory for product ${product.id}:`, updateError);
-          }
-        }
+
+      if (!product) {
+        throw new Error('Product not found');
       }
-      
+
+      // Prepare the inventory data to update
+      // If product has existing inventory, merge with new data
+      let inventoryToUpdate: InventoryData = {
+        quantities: data.quantities || {}
+      };
+
+      if (product.inventory) {
+        const currentInventory = typeof product.inventory === 'string' 
+          ? JSON.parse(product.inventory) 
+          : product.inventory;
+
+        inventoryToUpdate = {
+          ...currentInventory,
+          ...data
+        };
+      }
+
+      // Update the product with new inventory
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          inventory: inventoryToUpdate,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', productId);
+
+      if (updateError) {
+        throw new Error(`Error updating inventory: ${updateError.message}`);
+      }
+
       // Update local state
-      setSizeInventory(prev => ({
-        ...prev,
-        [productType]: {
-          ...prev[productType],
-          [size]: newQuantity
-        }
+      setInventory(prevInventory => ({
+        ...prevInventory || { quantities: {} },
+        ...data
       }));
-      
-      return true;
+
+      console.log('Inventory updated successfully');
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error updating inventory';
+      setError(errorMessage);
+      toast.error(errorMessage);
       console.error('Error updating inventory:', err);
-      toast.error('Failed to update inventory');
-      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Load inventory data when productId changes
+  useEffect(() => {
+    if (productId) {
+      fetchInventory();
+    } else {
+      setInventory({ quantities: {} });
+    }
+  }, [productId]);
+
   return {
-    sizeInventory,
+    inventory,
     loading,
-    fetchProductInventory,
+    error,
+    fetchInventory,
     updateInventory
   };
 };
-
-export default useProductInventory;

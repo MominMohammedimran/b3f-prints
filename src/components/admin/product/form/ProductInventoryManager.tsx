@@ -1,215 +1,205 @@
+
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus, Save } from 'lucide-react';
+import { Check, X, Trash2 } from 'lucide-react';
+import { useProductInventory } from '@/hooks/useProductInventory';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-
-interface InventoryItem {
-  size: string;
-  quantity: number;
-}
 
 interface ProductInventoryManagerProps {
-  productId: string;
-  productType: string;
-  initialInventory?: Record<string, number>;
-  onUpdate?: (inventory: Record<string, number>) => void;
+  productId: string | undefined;
+  onInventoryChange?: (inventory: any) => void;
 }
 
-const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({ 
-  productId, 
-  productType,
-  initialInventory = {},
-  onUpdate 
-}) => {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  
-  // Initialize inventory based on product type and existing data
+const ProductInventoryManager = ({ productId, onInventoryChange }: ProductInventoryManagerProps) => {
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [newSize, setNewSize] = useState<string>('');
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [initialLoad, setInitialLoad] = useState<boolean>(true);
+
+  const { 
+    inventory,
+    loading,
+    error,
+    fetchInventory,
+    updateInventory
+  } = useProductInventory(productId);
+
   useEffect(() => {
-    loadInventory();
-  }, [productId, productType, initialInventory]);
-  
-  const loadInventory = async () => {
-    setLoading(true);
-    
-    try {
-      // Get current inventory from the database
-      const { data, error } = await supabase
-        .from('products')
-        .select('inventory')
-        .eq('id', productId)
-        .single();
+    if (productId) {
+      fetchInventory();
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    if (inventory && !loading && initialLoad) {
+      const inventorySizes = Object.keys(inventory?.quantities || {});
+      setSizes(inventorySizes || []);
+      setQuantities(inventory?.quantities || {});
+      setInitialLoad(false);
+    }
+  }, [inventory, loading, initialLoad]);
+
+  const handleAddSize = () => {
+    if (!newSize.trim()) {
+      toast.error("Size cannot be empty");
+      return;
+    }
+
+    if (sizes.includes(newSize.trim())) {
+      toast.error("This size already exists");
+      return;
+    }
+
+    setSizes([...sizes, newSize.trim()]);
+    setQuantities({ ...quantities, [newSize.trim()]: 0 });
+    setNewSize('');
+
+    // Only update in database if product ID exists
+    if (productId && !initialLoad) {
+      const updatedQuantities = { ...quantities, [newSize.trim()]: 0 };
       
-      if (error) {
-        console.error('Error loading inventory:', error);
-        // Start with default inventory if we can't load existing
-        initializeDefaultInventory();
-        return;
+      updateInventory({
+        quantities: updatedQuantities
+      });
+
+      if (onInventoryChange) {
+        onInventoryChange({
+          quantities: updatedQuantities
+        });
       }
-      
-      if (data?.inventory) {
-        // If inventory exists in database, use it
-        const items: InventoryItem[] = [];
-        for (const [size, quantity] of Object.entries(data.inventory)) {
-          items.push({ size, quantity: Number(quantity) });
-        }
-        setInventory(items);
-      } else {
-        // Otherwise initialize with defaults
-        initializeDefaultInventory();
-      }
-    } catch (error) {
-      console.error('Error loading inventory:', error);
-      initializeDefaultInventory();
-    } finally {
-      setLoading(false);
     }
   };
-  
-  const initializeDefaultInventory = () => {
-    let defaultItems: InventoryItem[] = [];
-    
-    // Initialize based on product type
-    switch (productType.toLowerCase()) {
-      case 'tshirt':
-        defaultItems = [
-          { size: 'S', quantity: initialInventory?.S || 0 },
-          { size: 'M', quantity: initialInventory?.M || 0 },
-          { size: 'L', quantity: initialInventory?.L || 0 },
-          { size: 'XL', quantity: initialInventory?.XL || 0 },
-          { size: 'XXL', quantity: initialInventory?.XXL || 0 }
-        ];
-        break;
-        
-      case 'mug':
-        defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
-        ];
-        break;
-        
-      case 'cap':
-        defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
-        ];
-        break;
-        
-      default:
-        defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
-        ];
+
+  const handleRemoveSize = (size: string) => {
+    const newSizes = sizes.filter(s => s !== size);
+    const newQuantities = { ...quantities };
+    delete newQuantities[size];
+
+    setSizes(newSizes);
+    setQuantities(newQuantities);
+
+    // Only update in database if product ID exists
+    if (productId && !initialLoad) {
+      updateInventory({
+        quantities: newQuantities
+      });
+
+      if (onInventoryChange) {
+        onInventoryChange({
+          quantities: newQuantities
+        });
+      }
     }
-    
-    setInventory(defaultItems);
   };
-  
-  const handleQuantityChange = (index: number, amount: number) => {
-    setInventory(prev => {
-      const updated = [...prev];
-      updated[index].quantity = Math.max(0, updated[index].quantity + amount);
-      return updated;
-    });
-  };
-  
-  const handleDirectQuantityChange = (index: number, value: string) => {
+
+  const handleQuantityChange = (size: string, value: string) => {
     const quantity = parseInt(value) || 0;
     if (quantity < 0) return;
     
-    setInventory(prev => {
-      const updated = [...prev];
-      updated[index].quantity = quantity;
-      return updated;
-    });
+    setQuantities({ ...quantities, [size]: quantity });
   };
-  
-  const saveInventory = async () => {
-    setLoading(true);
-    
-    try {
-      // Convert inventory array to object format for storage
-      const inventoryObject: Record<string, number> = {};
-      inventory.forEach(item => {
-        inventoryObject[item.size] = item.quantity;
+
+  const handleQuantityUpdate = () => {
+    if (productId && !initialLoad) {
+      updateInventory({
+        quantities: quantities
       });
-      
-      // Update inventory in database
-      const { error } = await supabase
-        .from('products')
-        .update({
-          inventory: inventoryObject,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', productId);
-      
-      if (error) throw error;
-      
-      toast.success('Inventory updated successfully');
-      
-      // Notify parent component of update
-      if (onUpdate) {
-        onUpdate(inventoryObject);
+
+      if (onInventoryChange) {
+        onInventoryChange({
+          quantities: quantities
+        });
       }
-    } catch (error) {
-      console.error('Error saving inventory:', error);
-      toast.error('Failed to update inventory');
-    } finally {
-      setLoading(false);
+      
+      setIsEditing(false);
+      toast.success("Inventory quantities updated");
     }
   };
-  
+
+  const handleQuantityBlur = () => {
+    if (isEditing) {
+      handleQuantityUpdate();
+    }
+  };
+
+  if (loading) {
+    return <div className="text-gray-500">Loading inventory...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error loading inventory: {error}</div>;
+  }
+
   return (
-    <div className="space-y-4 border rounded-lg p-4">
-      <div className="flex justify-between items-center">
-        <h3 className="font-medium text-lg">Inventory Management</h3>
-        <Button 
-          onClick={saveInventory} 
-          disabled={loading}
-          size="sm"
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Save Inventory
-        </Button>
-      </div>
-      
-      <div className="grid gap-2">
-        {inventory.map((item, index) => (
-          <div key={item.size} className="flex items-center gap-2">
-            <Label className="w-20">{item.size}</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => handleQuantityChange(index, -1)}
-              disabled={item.quantity <= 0}
-            >
-              <Minus className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Sizes & Inventory</h3>
+        {isEditing ? (
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+              <X size={16} className="mr-1" /> Cancel
             </Button>
-            
-            <Input
-              type="number"
-              value={item.quantity}
-              onChange={(e) => handleDirectQuantityChange(index, e.target.value)}
-              className="w-20 text-center"
-              min="0"
-            />
-            
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => handleQuantityChange(index, 1)}
-            >
-              <Plus className="h-4 w-4" />
+            <Button size="sm" onClick={handleQuantityUpdate}>
+              <Check size={16} className="mr-1" /> Save
             </Button>
           </div>
-        ))}
+        ) : (
+          sizes.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+              Edit Quantities
+            </Button>
+          )
+        )}
       </div>
-      
-      <p className="text-sm text-gray-500">
-        Inventory will be automatically updated when orders are placed
-      </p>
+
+      {sizes.length > 0 ? (
+        <div className="grid gap-4">
+          {sizes.map((size) => (
+            <div key={size} className="flex items-center justify-between gap-2 border p-2 rounded-md">
+              <span className="font-medium w-20">{size}</span>
+              <div className="flex items-center gap-2 grow">
+                <Label htmlFor={`quantity-${size}`} className="w-20">Quantity:</Label>
+                <Input
+                  id={`quantity-${size}`}
+                  type="number"
+                  min="0"
+                  value={quantities[size] || 0}
+                  onChange={(e) => {
+                    handleQuantityChange(size, e.target.value);
+                    setIsEditing(true);
+                  }}
+                  onBlur={handleQuantityBlur}
+                  className="w-24"
+                />
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => handleRemoveSize(size)}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 size={18} />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-sm">No sizes added yet. Add sizes below.</p>
+      )}
+
+      <div className="flex gap-2 mt-4">
+        <Input
+          placeholder="Add size (e.g. S, M, L, XL)"
+          value={newSize}
+          onChange={(e) => setNewSize(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddSize()}
+          className="flex-grow"
+        />
+        <Button onClick={handleAddSize}>Add Size</Button>
+      </div>
     </div>
   );
 };

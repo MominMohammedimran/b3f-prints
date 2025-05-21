@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -72,11 +73,11 @@ const Checkout = () => {
             setCurrentOrder(existingOrder);
             console.log('Found existing order:', existingOrder);
           } else {
-            createNewOrder();
+            await createNewOrder();
           }
         } catch (error) {
           console.error('Error loading order data:', error);
-          createNewOrder();
+          await createNewOrder();
         }
       }
     };
@@ -299,6 +300,11 @@ const Checkout = () => {
         } catch (error) {
           console.error('Error saving address to database:', error);
         }
+      }
+
+      // If we don't have a current order yet, create one
+      if (!currentOrder?.id) {
+        await createNewOrder();
       }
 
       if (currentUser && supabase && currentOrder?.id) {
