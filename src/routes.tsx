@@ -13,7 +13,6 @@ import Wishlist from './pages/Wishlist';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import AdminLogin from './pages/admin/AdminLogin';
-import AdminSignUp from './pages/admin/AdminSignUp';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
@@ -46,7 +45,6 @@ const AppRoutes = () => {
       
       {/* Admin Routes */}
       <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin/signup" element={<AdminSignUp />} />
       <Route 
         path="/admin/dashboard" 
         element={

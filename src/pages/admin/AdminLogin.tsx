@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,23 +130,16 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
-        // Update user_id if not set - use a separate variable for the update
-        if (data.user.id && !admin.user_id) {
-          // Execute an SQL query that will work with our database schema
+        // Update user_id if not set
+        if (!admin.user_id && data.user.id) {
           const { error: updateError } = await supabase
             .from('admin_users')
-            .update({ 
-              // Note: Only include fields that actually exist in the table
-              updated_at: new Date().toISOString()
-            })
+            .update({ user_id: data.user.id })
             .eq('id', admin.id);
             
           if (updateError) {
-            console.error('Error updating admin record:', updateError);
+            console.error('Error updating admin user_id:', updateError);
           }
-          
-          // Store the user_id in the admin object for local use
-          admin.user_id = data.user.id;
         }
         
         // Successfully authenticated as admin
@@ -167,7 +159,9 @@ const AdminLogin = () => {
             .from('admin_users')
             .insert({
               email: email,
-              // Note: Only include fields that exist in the table based on the database schema
+              user_id: data.user.id,
+              role: 'super_admin',
+              permissions: ['products.all', 'orders.all', 'users.all']
             });
             
           if (insertError) {
