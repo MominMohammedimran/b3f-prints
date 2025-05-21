@@ -4,11 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useProductInventory = () => {
-  const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({
-    tshirt: { S: 10, M: 15, L: 8, XL: 5 },
-    mug: { Standard: 20 },
-    cap: { Standard: 12 }
-  });
+  const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(false);
 
   const fetchProductInventory = useCallback(async () => {
@@ -17,51 +13,45 @@ export const useProductInventory = () => {
       // Get inventory data from the database for all products
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, category, stock');
+        .select('id, name, product_type, inventory');
       
       if (error) {
         throw error;
       }
       
-      // Format the inventory data with default values
-      const inventoryData: Record<string, Record<string, number>> = {
-        tshirt: { S: 10, M: 15, L: 8, XL: 5 },
-        mug: { Standard: 20 },
-        cap: { Standard: 12 }
-      };
-      
-      // Update with actual stock data if available
-      if (data && Array.isArray(data)) {
-        data.forEach(product => {
-          if (!product) return;
-          
-          // Determine product type from category or name
-          let productType = 'unknown';
-          const category = product.category?.toLowerCase() || '';
-          const name = product.name?.toLowerCase() || '';
-          
-          if (category.includes('tshirt') || name.includes('tshirt')) {
-            productType = 'tshirt';
-          } else if (category.includes('mug') || name.includes('mug')) {
-            productType = 'mug';
-          } else if (category.includes('cap') || name.includes('cap')) {
-            productType = 'cap';
+      // Format the inventory data
+      const inventoryData: Record<string, Record<string, number>> = {};
+      data?.forEach(product => {
+        const productType = product.product_type || '';
+        if (!product.inventory) {
+          // Default inventory if none exists
+          switch (productType.toLowerCase()) {
+            case 'tshirt':
+              inventoryData[productType] = { S: 10, M: 15, L: 8, XL: 5 };
+              break;
+            case 'mug':
+              inventoryData[productType] = { Standard: 20 };
+              break;
+            case 'cap':
+              inventoryData[productType] = { Standard: 12 };
+              break;
+            default:
+              inventoryData[productType] = { Standard: 10 };
           }
-
-          // Update stock for the first size if we have a valid product type
-          if (productType !== 'unknown' && inventoryData[productType]) {
-            const firstSize = Object.keys(inventoryData[productType])[0];
-            if (firstSize && typeof product.stock === 'number') {
-              inventoryData[productType][firstSize] = product.stock;
-            }
-          }
-        });
-      }
+        } else {
+          inventoryData[productType] = product.inventory;
+        }
+      });
       
       setSizeInventory(inventoryData);
     } catch (err) {
       console.error('Error fetching inventory:', err);
-      // Fallback to default data (already set in initial state)
+      // Fallback to default data
+      setSizeInventory({
+        tshirt: { S: 10, M: 15, L: 8, XL: 5 },
+        mug: { Standard: 20 },
+        cap: { Standard: 12 }
+      });
     } finally {
       setLoading(false);
     }
@@ -74,21 +64,15 @@ export const useProductInventory = () => {
 
   const updateInventory = async (productType: string, size: string, change: number) => {
     try {
-      // Safety check for undefined values
-      if (!productType || !size || !sizeInventory[productType]) {
-        console.warn('Invalid product type or size provided:', { productType, size });
-        return false;
-      }
-      
       // Calculate the new quantity
-      const currentQuantity = sizeInventory[productType][size] || 0;
+      const currentQuantity = sizeInventory[productType]?.[size] || 0;
       const newQuantity = Math.max(0, currentQuantity + change); // Ensure non-negative
       
-      // Get products of this type (using category as a proxy for product_type)
+      // Get products of this type
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, stock')
-        .ilike('category', `%${productType}%`);
+        .select('id, inventory')
+        .eq('product_type', productType);
         
       if (productsError) {
         throw productsError;
@@ -97,30 +81,25 @@ export const useProductInventory = () => {
       // Update all products of this type
       if (products && products.length > 0) {
         for (const product of products) {
-          if (!product || !product.id) continue;
+          const currentInventory = product.inventory || {};
+          const updatedInventory = { ...currentInventory, [size]: newQuantity };
           
-          // Update the stock field for compatibility
           const { error: updateError } = await supabase
             .from('products')
-            .update({ 
-              stock: newQuantity,
-              updated_at: new Date().toISOString() 
-            })
+            .update({ inventory: updatedInventory })
             .eq('id', product.id);
             
           if (updateError) {
             console.error(`Error updating inventory for product ${product.id}:`, updateError);
           }
         }
-      } else {
-        console.warn(`No products found for type: ${productType}`);
       }
       
       // Update local state
       setSizeInventory(prev => ({
         ...prev,
         [productType]: {
-          ...(prev[productType] || {}),
+          ...prev[productType],
           [size]: newQuantity
         }
       }));
