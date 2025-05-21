@@ -191,13 +191,17 @@ const Payment = () => {
             user_email: currentUser.email,
             items: serializedItems,
             order_number: orderData.orderNumber,
-            total: totalPrice,
+            total: totalPrice + 40, // Total price + delivery fee
             status: 'order_placed',
             payment_method: 'cod',
             shipping_address: shippingAddress,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            delivery_fee: 40, // You can adjust this based on your logic
+            delivery_fee: 40,
+            payment_details: {
+              method: 'cod',
+              status: 'pending'
+            }
           })
           .select()
           .single();
@@ -213,16 +217,21 @@ const Payment = () => {
         await clearCart();
         
         // Clear the shipping address from localStorage
-     
+        localStorage.removeItem('shippingAddress');
         
         // Show success message
         toast.success('Order placed successfully!');
         
         // Redirect to order confirmation page
-       navigate(`/order-complete/${order.id}`, {
-  state: { shippingAddress, paymentMethod, items: cartItems, total: orderData.total, deliveryFee: orderData.deliveryFee }
-});
-
+        navigate(`/order-complete/${order.id}`, {
+          state: { 
+            shippingAddress, 
+            paymentMethod, 
+            items: cartItems, 
+            total: orderData.total, 
+            deliveryFee: orderData.deliveryFee 
+          }
+        });
       } catch (error: any) {
         console.error('Error placing order:', error);
         toast.error('Failed to place order. Please try again.');
@@ -268,7 +277,6 @@ const Payment = () => {
               />
             </div>
          
-            
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
               
@@ -284,6 +292,18 @@ const Payment = () => {
                 </div>
               )}
             </div>
+            
+            {showRazorpay && paymentMethod === 'razorpay' && (
+              <div className="bg-white p-6 rounded-lg shadow-sm mb-6 mt-6">
+                <h2 className="text-xl font-semibold mb-4">Razorpay Payment</h2>
+                <RazorpayCheckout 
+                  amount={orderData.total}
+                  orderId={orderData.orderNumber}
+                  onSuccess={handlePaymentSuccess}
+                  onFailure={handlePaymentFailure}
+                />
+              </div>
+            )}
           </div>
           
           <div className="lg:col-span-1">
@@ -296,18 +316,6 @@ const Payment = () => {
               />
             )}
           </div>
-             
-            {showRazorpay && paymentMethod === 'razorpay' && (
-              <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 className="text-xl font-semibold mb-4">Razorpay Payment</h2>
-                <RazorpayCheckout 
-                  amount={orderData.total}
-                  orderId={orderData.orderNumber}
-                  onSuccess={handlePaymentSuccess}
-                  onFailure={handlePaymentFailure}
-                />
-              </div>
-            )}
         </div>
       </div>
     </Layout>

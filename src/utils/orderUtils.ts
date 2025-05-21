@@ -91,6 +91,8 @@ export const getOrderStatusMessage = (status: string): string => {
       return 'Your order has been delivered.';
     case 'cancelled':
       return 'Your order has been cancelled.';
+    case 'order_placed':
+      return 'Your order has been placed successfully.';
     default:
       return 'Order received.';
   }
@@ -162,4 +164,37 @@ export const normalizeOrderData = (order: any): Order => {
     date: order.date || order.created_at || new Date().toISOString(),
     cancellation_reason: order.cancellation_reason || ''
   };
+};
+
+/**
+ * Calculate estimated delivery date (5 days from order date)
+ * @param orderDate the date when order was placed
+ * @returns estimated delivery date as string
+ */
+export const calculateEstimatedDelivery = (orderDate: string | Date): string => {
+  const date = new Date(orderDate);
+  date.setDate(date.getDate() + 5);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Serialize cart items for storage
+ * @param items cart items to serialize 
+ * @returns serialized cart items ready for storage
+ */
+export const serializeCartItems = (items: CartItem[]): any[] => {
+  return items.map(item => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    size: item.size,
+    image: item.image,
+    productId: item.productId,
+    color: item.color
+  }));
 };

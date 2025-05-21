@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Layout from '../components/layout/Layout';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../context/AuthContext';
 import OrderSummaryComponent from '../components/checkout/OrderSummaryComponent';
@@ -39,11 +40,15 @@ const Checkout = () => {
     window.scrollTo(0, 0);
 
     if (!currentUser) {
-      toast.warning({
-        title: "Warning",
-        description: 'Please sign in to checkout'
-      });
+      toast.error('Please sign in to checkout');
       navigate('/signin?redirectTo=/checkout');
+      return;
+    }
+
+    // Check if cart is empty
+    if (!cartItems || cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/cart');
       return;
     }
 
@@ -105,7 +110,7 @@ const Checkout = () => {
 
     loadOrderData();
     loadUserData();
-  }, [currentUser, navigate, currentLocation]);
+  }, [currentUser, navigate, currentLocation, cartItems]);
 
   useEffect(() => {
     if (!addressesLoading) {
@@ -146,10 +151,7 @@ const Checkout = () => {
 
   const createNewOrder = async () => {
     if (!cartItems || cartItems.length === 0) {
-      toast.error({
-        title: "Error",
-        description: 'Your cart is empty'
-      });
+      toast.error('Your cart is empty');
       navigate('/cart');
       return;
     }
@@ -168,17 +170,29 @@ const Checkout = () => {
 
     if (currentUser && supabase) {
       try {
+        // Convert cart items to a format that can be stored in Supabase
+        const serializedItems = cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          image: item.image,
+          productId: item.productId
+        }));
+
         const { data, error } = await supabase
           .from('orders')
           .insert({
             user_id: currentUser.id,
+            user_email: currentUser.email,
             order_number: orderData.orderNumber,
             total: orderData.total,
             delivery_fee: orderData.deliveryFee,
-            subtotal: orderData.subtotal,
-            items: JSON.stringify(cartItems), // Convert CartItems to JSON string
+            items: serializedItems,
             status: 'pending',
             created_at: new Date().toISOString(),
+            payment_method: 'pending'
           })
           .select('id')
           .single();
@@ -191,10 +205,7 @@ const Checkout = () => {
         });
       } catch (error) {
         console.error('Error creating order:', error);
-        toast.error({
-          title: "Error",
-          description: 'Failed to create new order'
-        });
+        toast.error('Failed to create new order');
       }
     }
   };
@@ -255,7 +266,7 @@ const Checkout = () => {
         try {
           await supabase.from('addresses').insert({
             user_id: currentUser.id,
-            name: `${values.firstName} ${values.lastName}`, // Add name field for database
+            name: `${values.firstName} ${values.lastName}`, 
             street: values.address,
             city: values.city,
             state: values.state,
@@ -273,16 +284,13 @@ const Checkout = () => {
         await supabase
           .from('orders')
           .update({
-            shipping_address: JSON.stringify(shippingAddress), // Convert to JSON string
+            shipping_address: shippingAddress,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentOrder.id);
       }
 
-      toast.success({
-        title: "Success",
-        description: 'Shipping info saved successfully'
-      });
+      toast.success('Shipping info saved successfully');
 
       setTimeout(() => {
         navigate('/payment', {
@@ -291,10 +299,7 @@ const Checkout = () => {
       }, 500);
     } catch (error) {
       console.error('Error saving shipping details:', error);
-      toast.error({
-        title: "Error",
-        description: 'Failed to save shipping details'
-      });
+      toast.error('Failed to save shipping details');
     } finally {
       setIsLoading(false);
     }
