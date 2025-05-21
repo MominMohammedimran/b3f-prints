@@ -4,12 +4,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
-import { Toaster } from 'sonner'
-import { AuthProvider } from './context/AuthContext'
-import { LocationProvider } from './context/LocationContext'
 import { MicroservicesProvider } from './context/MicroservicesContext'
-
-import { CartProvider } from './context/CartContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Import performance optimizations
@@ -33,18 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <LocationProvider>
-            <MicroservicesProvider>
-             
-                <CartProvider>
-                  <App />
-                  <Toaster position="top-center" offset={12} richColors closeButton />
-                </CartProvider>
-             
-            </MicroservicesProvider>
-          </LocationProvider>
-        </AuthProvider>
+        <MicroservicesProvider>
+          <App />
+        </MicroservicesProvider>
       </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>,

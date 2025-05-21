@@ -60,15 +60,15 @@ export const setSecurityHeaders = (): void => {
 /**
  * Check password strength and return a score and feedback
  * @param password The password to check
- * @returns Object containing score (0-4) and feedback messages
+ * @returns Object containing strength, score and message
  */
-export const checkPasswordStrength = (password: string): { score: number; feedback: string } => {
+export const checkPasswordStrength = (password: string): { strength: 'weak' | 'medium' | 'strong'; score: number; message: string } => {
   // Initialize with lowest score
   let score = 0;
   const feedback: string[] = [];
 
   if (!password) {
-    return { score: 0, feedback: 'Please enter a password' };
+    return { strength: 'weak', score: 0, message: 'Please enter a password' };
   }
 
   // Length check
@@ -114,24 +114,60 @@ export const checkPasswordStrength = (password: string): { score: number; feedba
 
   // Generate feedback message based on score
   let feedbackMessage = '';
+  let strength: 'weak' | 'medium' | 'strong' = 'weak';
   
   if (feedback.length > 0) {
     feedbackMessage = feedback.join('. ');
+  } 
+  
+  // Determine strength level and message
+  if (score === 0 || score === 1) {
+    strength = 'weak';
+    feedbackMessage = feedbackMessage || 'Weak password';
+  } else if (score === 2 || score === 3) {
+    strength = 'medium';
+    feedbackMessage = feedbackMessage || 'Moderate password';
   } else {
-    switch(score) {
-      case 4:
-        feedbackMessage = 'Very strong password';
-        break;
-      case 3:
-        feedbackMessage = 'Strong password';
-        break;
-      case 2:
-        feedbackMessage = 'Moderate password';
-        break;
-      default:
-        feedbackMessage = 'Weak password';
-    }
+    strength = 'strong';
+    feedbackMessage = feedbackMessage || 'Strong password';
   }
 
-  return { score, feedback: feedbackMessage };
+  return { strength, score, message: feedbackMessage };
+};
+
+/**
+ * Check for session security issues
+ */
+export const checkSessionSecurity = (): boolean => {
+  // Basic session security check - could be expanded
+  const securityCheck = sessionStorage.getItem('security_check');
+  if (!securityCheck) {
+    sessionStorage.setItem('security_check', Date.now().toString());
+    return false; // First visit, consider secure
+  }
+  
+  // Check if session token is older than expected
+  const tokenTimestamp = parseInt(securityCheck);
+  const maxSessionAge = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+  
+  if (Date.now() - tokenTimestamp > maxSessionAge) {
+    // Session too old, potential security issue
+    return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Initialize security features for the application
+ */
+export const initializeSecurity = (): void => {
+  enforceHttps();
+  setSecurityHeaders();
+  
+  // Additional security measures can be added here
+  if (!checkSessionSecurity()) {
+    console.warn('Session security check failed');
+    // Could implement additional security measures
+  }
 };
