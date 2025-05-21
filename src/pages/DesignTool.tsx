@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -15,6 +14,7 @@ import DesignCanvas from '../components/design/DesignCanvas';
 import CustomizationSidebar from '../components/design/CustomizationSidebar';
 import { useDesignCanvas } from '@/hooks/useDesignCanvas';
 import { useProductInventory } from '@/hooks/useProductInventory';
+import { useDesignToolInventory } from '@/hooks/useDesignToolInventory';
 
 // Product interface
 interface Product {
@@ -45,7 +45,7 @@ const DesignTool = () => {
   const { currentUser } = useAuth();
   const { currentLocation } = useLocation();
   const { addToCart } = useCart();
-  const { sizeInventory, fetchProductInventory, updateInventory } = useProductInventory();
+  const { sizeInventory, fetchProductInventory, updateInventory } = useDesignToolInventory();
   
   const emojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', 

@@ -55,8 +55,8 @@ export const useProductInventory = (productId?: string): UseProductInventoryRetu
         product_type: product.product_type || ''
       };
 
-      // If product has inventory field, parse it
-      if (product.inventory) {
+      // Check if product has inventory field, safely
+      if (product && 'inventory' in product && product.inventory) {
         try {
           // If inventory is a string, parse it
           if (typeof product.inventory === 'string') {
@@ -114,7 +114,8 @@ export const useProductInventory = (productId?: string): UseProductInventoryRetu
         quantities: data.quantities || {}
       };
 
-      if (product.inventory) {
+      // Check if product has inventory field, safely
+      if (product && 'inventory' in product && product.inventory) {
         const currentInventory = typeof product.inventory === 'string' 
           ? JSON.parse(product.inventory) 
           : product.inventory;
