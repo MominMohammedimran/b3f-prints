@@ -17,6 +17,17 @@ interface UseProductInventoryReturn {
   updateInventory: (data: Partial<InventoryData>) => Promise<void>;
 }
 
+// Define a more specific type for the product that includes the properties we need to access
+interface ProductWithInventory {
+  id: string;
+  product_type?: string;
+  inventory?: {
+    quantities?: Record<string, number>;
+    [key: string]: any;
+  } | string;
+  [key: string]: any; // Allow other properties
+}
+
 export const useProductInventory = (productId?: string): UseProductInventoryReturn => {
   const [inventory, setInventory] = useState<InventoryData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,23 +60,27 @@ export const useProductInventory = (productId?: string): UseProductInventoryRetu
         return;
       }
 
+      // Cast the product to our more specific type
+      const typedProduct = product as unknown as ProductWithInventory;
+
       // Extract inventory data with fallback
       const inventoryData: InventoryData = {
         quantities: {},
-        product_type: product.product_type || ''
+        product_type: typedProduct.product_type || ''
       };
 
       // Check if product has inventory field, safely
-      if (product && 'inventory' in product && product.inventory) {
+      if (typedProduct && 'inventory' in typedProduct && typedProduct.inventory) {
         try {
           // If inventory is a string, parse it
-          if (typeof product.inventory === 'string') {
-            const parsedInventory = JSON.parse(product.inventory);
+          if (typeof typedProduct.inventory === 'string') {
+            const parsedInventory = JSON.parse(typedProduct.inventory);
             inventoryData.quantities = parsedInventory.quantities || {};
           } 
           // If inventory is an object
-          else if (typeof product.inventory === 'object') {
-            inventoryData.quantities = product.inventory.quantities || {};
+          else if (typeof typedProduct.inventory === 'object') {
+            const inventoryObj = typedProduct.inventory as { quantities?: Record<string, number> };
+            inventoryData.quantities = inventoryObj.quantities || {};
           }
         } catch (parseError) {
           console.error('Error parsing inventory:', parseError);
@@ -108,6 +123,9 @@ export const useProductInventory = (productId?: string): UseProductInventoryRetu
         throw new Error('Product not found');
       }
 
+      // Cast the product to our more specific type
+      const typedProduct = product as unknown as ProductWithInventory;
+
       // Prepare the inventory data to update
       // If product has existing inventory, merge with new data
       let inventoryToUpdate: InventoryData = {
@@ -115,10 +133,10 @@ export const useProductInventory = (productId?: string): UseProductInventoryRetu
       };
 
       // Check if product has inventory field, safely
-      if (product && 'inventory' in product && product.inventory) {
-        const currentInventory = typeof product.inventory === 'string' 
-          ? JSON.parse(product.inventory) 
-          : product.inventory;
+      if (typedProduct && 'inventory' in typedProduct && typedProduct.inventory) {
+        const currentInventory = typeof typedProduct.inventory === 'string' 
+          ? JSON.parse(typedProduct.inventory) 
+          : typedProduct.inventory;
 
         inventoryToUpdate = {
           ...currentInventory,

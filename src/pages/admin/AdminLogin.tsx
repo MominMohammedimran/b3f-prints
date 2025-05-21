@@ -8,12 +8,12 @@ import AdminOTPForm from '@/components/admin/AdminOTPForm';
 import { User } from '@supabase/supabase-js';
 import { ensureMainAdminExists } from '@/utils/adminAuth';
 
-// Define proper interface for admin records
+// Define proper interface for admin records with all required fields
 interface AdminRecord {
   id: string;
   email: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   role?: string;
   user_id?: string;
   permissions?: string[];
@@ -146,7 +146,11 @@ const AdminLogin = () => {
         if (!admin.user_id) {
           await supabase
             .from('admin_users')
-            .update({ user_id: data.user.id })
+            .update({ 
+              user_id: data.user.id,
+              role: admin.role || 'admin',
+              permissions: admin.permissions || []
+            } as AdminRecord)
             .eq('id', admin.id);
         }
         
@@ -323,7 +327,11 @@ const AdminLogin = () => {
         if (verificationResult.data?.user && isB3FEmail && !admin.user_id) {
           await supabase
             .from('admin_users')
-            .update({ user_id: verificationResult.data.user.id })
+            .update({ 
+              user_id: verificationResult.data.user.id,
+              role: admin.role || 'admin',
+              permissions: admin.permissions || []
+            } as AdminRecord)
             .eq('id', admin.id);
         }
         
