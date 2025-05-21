@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { serializeCartItems } from '@/utils/orderUtils';
+import { CartItem } from '@/lib/types'; // Import the correct CartItem type
 
 interface ShippingAddress {
   name: string;
@@ -10,17 +11,6 @@ interface ShippingAddress {
   state: string;
   zipCode: string;
   country: string;
-}
-
-interface CartItem {
-  id?: string;
-  product_id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  color?: string;
-  size?: string;
 }
 
 /**
@@ -51,8 +41,14 @@ export class PaymentService {
         throw new Error('Supabase client not initialized');
       }
       
+      // Ensure all cart items have required id property
+      const validatedCartItems: CartItem[] = cartItems.map(item => ({
+        ...item,
+        id: item.id || `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      }));
+      
       // Serialize the cart items for storage
-      const serializedItems = serializeCartItems(cartItems);
+      const serializedItems = serializeCartItems(validatedCartItems);
       
       // Create the basic payment details object
       const paymentDetails = {
@@ -144,6 +140,12 @@ export class PaymentService {
     paymentDetails: any = {}
   ) {
     try {
+      // Ensure all cart items have required id property
+      const validatedCartItems: CartItem[] = cartItems.map(item => ({
+        ...item,
+        id: item.id || `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      }));
+      
       // Create order with basic payment details
       const orderData = await this.createOrder(
         userId,
@@ -151,7 +153,7 @@ export class PaymentService {
         orderNumber,
         totalAmount,
         deliveryFee,
-        cartItems,
+        validatedCartItems,
         shippingAddress,
         paymentMethod
       );

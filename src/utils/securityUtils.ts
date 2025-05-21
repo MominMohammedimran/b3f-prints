@@ -77,3 +77,45 @@ export const applyRateLimit = async (
   
   return true; // Always allow in client-side implementation
 };
+
+/**
+ * Check password strength
+ * Returns an object with strength level and a message
+ */
+export const checkPasswordStrength = (password: string): { strength: 'weak' | 'medium' | 'strong'; message: string } => {
+  if (!password) {
+    return { strength: 'weak', message: 'Enter a password' };
+  }
+
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  // Calculate score
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (hasUpperCase) score += 1;
+  if (hasLowerCase) score += 1;
+  if (hasNumbers) score += 1;
+  if (hasSpecialChar) score += 1;
+  
+  // Determine strength level based on score
+  if (score < 3) {
+    return { 
+      strength: 'weak', 
+      message: 'Password is weak. Include uppercase, lowercase, numbers and special characters.' 
+    };
+  } else if (score < 5) {
+    return { 
+      strength: 'medium', 
+      message: 'Password is medium strength. Try adding more variety.' 
+    };
+  } else {
+    return {
+      strength: 'strong',
+      message: 'Password is strong!'
+    };
+  }
+};
