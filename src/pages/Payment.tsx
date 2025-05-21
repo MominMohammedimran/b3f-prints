@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -11,6 +10,8 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import RazorpayCheckout from '@/components/payment/RazorpayCheckout';
+import PaymentService from '@/services/paymentService';
+import { calculateEstimatedDelivery } from '@/utils/orderUtils';
 
 const Payment = () => {
   const { cartItems, clearCart, totalPrice } = useCart();
@@ -78,50 +79,29 @@ const Payment = () => {
     try {
       setIsProcessing(true);
       
-      // Convert cart items to a format that can be stored in Supabase
-      const serializedItems = cartItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        size: item.size,
-        image: item.image,
-        productId: item.productId
-      }));
+      // Use PaymentService to process payment
+      const paymentService = new PaymentService(supabase);
+      const estimatedDelivery = calculateEstimatedDelivery(new Date());
       
-      // Create order in database
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert({
-          user_id: currentUser.id,
-          user_email: currentUser.email,
-          items: serializedItems,
-          order_number: orderData.orderNumber,
-          total: orderData.total,
-          status: 'order_placed',
-          payment_method: paymentMethod,
-          shipping_address: shippingAddress,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          delivery_fee: orderData.deliveryFee,
-          payment_details: {
-            payment_id: paymentDetails.paymentId,
-            order_id: paymentDetails.orderId,
-            amount: paymentDetails.amount,
-            currency: paymentDetails.currency,
-            signature: paymentDetails.signature,
-            status: 'completed'
-          }
-        })
-        .select()
-        .single();
+      // Process the payment through our service
+      const result = await paymentService.processPayment(
+        currentUser.id,
+        currentUser.email || '',
+        orderData.orderNumber,
+        orderData.total,
+        orderData.deliveryFee,
+        cartItems,
+        shippingAddress,
+        estimatedDelivery,
+        'razorpay',
+        paymentDetails
+      );
       
-      if (error) {
-        console.error('Error creating order:', error);
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Payment processing failed');
       }
       
-      console.log('Order created:', order);
+      console.log('Order created:', result);
       
       // Clear cart after successful order
       await clearCart();
@@ -133,10 +113,11 @@ const Payment = () => {
       toast.success('Payment successful! Order placed.');
       
       // Redirect to order confirmation page
-      navigate(`/order-complete/${order.id}`);
+      navigate(`/order-complete/${result.orderId}`);
     } catch (error: any) {
       console.error('Error processing payment:', error);
       toast.error(error.message || 'Payment processing failed');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -166,77 +147,52 @@ const Payment = () => {
       return;
     }
     
-    if (paymentMethod === 'razorpay') {
-      setShowRazorpay(true);
-    } else if (paymentMethod === 'cod') {
-      try {
-        setIsProcessing(true);
-        
-        // Convert cart items to a format that can be stored in Supabase
-        const serializedItems = cartItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          size: item.size,
-          image: item.image,
-          productId: item.productId
-        }));
-        
-        // Create order in database
-        const { data: order, error } = await supabase
-          .from('orders')
-          .insert({
-            user_id: currentUser.id,
-            user_email: currentUser.email,
-            items: serializedItems,
-            order_number: orderData.orderNumber,
-            total: totalPrice + 40, // Total price + delivery fee
-            status: 'order_placed',
-            payment_method: 'cod',
-            shipping_address: shippingAddress,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            delivery_fee: 40,
-            payment_details: {
-              method: 'cod',
-              status: 'pending'
-            }
-          })
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Error creating order:', error);
-          throw error;
-        }
-        
-        console.log('Order created:', order);
-        
-        // Clear cart after successful order
-        await clearCart();
-        
-        // Clear the shipping address from localStorage
-        localStorage.removeItem('shippingAddress');
-        
-        // Show success message
-        toast.success('Order placed successfully!');
-        
-        // Redirect to order confirmation page
-        navigate(`/order-complete/${order.id}`, {
-          state: { 
-            shippingAddress, 
-            paymentMethod, 
-            items: cartItems, 
-            total: orderData.total, 
-            deliveryFee: orderData.deliveryFee 
-          }
-        });
-      } catch (error: any) {
-        console.error('Error placing order:', error);
-        toast.error('Failed to place order. Please try again.');
+    try {
+      setIsProcessing(true);
+      
+      if (paymentMethod === 'razorpay') {
+        setShowRazorpay(true);
         setIsProcessing(false);
+        return;
       }
+      
+      // For COD, directly process the order
+      const paymentService = new PaymentService(supabase);
+      const estimatedDelivery = calculateEstimatedDelivery(new Date());
+      
+      // Process the payment through our service
+      const result = await paymentService.processPayment(
+        currentUser.id,
+        currentUser.email || '',
+        orderData.orderNumber,
+        orderData.total,
+        orderData.deliveryFee,
+        cartItems,
+        shippingAddress,
+        estimatedDelivery,
+        'cod'
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Order processing failed');
+      }
+      
+      // Clear cart after successful order
+      await clearCart();
+      
+      // Clear the shipping address from localStorage
+      localStorage.removeItem('shippingAddress');
+      
+      // Show success message
+      toast.success('Order placed successfully!');
+      
+      // Redirect to order confirmation page
+      navigate(`/order-complete/${result.orderId}`);
+    } catch (error: any) {
+      console.error('Error placing order:', error);
+      toast.error(error.message || 'Failed to place order. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
   
@@ -297,8 +253,8 @@ const Payment = () => {
               <div className="bg-white p-6 rounded-lg shadow-sm mb-6 mt-6">
                 <h2 className="text-xl font-semibold mb-4">Razorpay Payment</h2>
                 <RazorpayCheckout 
-                  amount={orderData.total}
-                  orderId={orderData.orderNumber}
+                  amount={orderData?.total || 0}
+                  orderId={orderData?.orderNumber || ''}
                   onSuccess={handlePaymentSuccess}
                   onFailure={handlePaymentFailure}
                 />

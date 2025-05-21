@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -55,7 +54,8 @@ const Checkout = () => {
     const loadOrderData = async () => {
       if (currentUser && supabase) {
         try {
-          const { data: existingOrder } = await supabase
+          // Try to get any existing pending order for this user
+          const { data: existingOrder, error } = await supabase
             .from('orders')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -63,9 +63,14 @@ const Checkout = () => {
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
+            
+          if (error) {
+            console.error('Error checking existing orders:', error);
+          }
 
           if (existingOrder) {
             setCurrentOrder(existingOrder);
+            console.log('Found existing order:', existingOrder);
           } else {
             createNewOrder();
           }
@@ -79,11 +84,15 @@ const Checkout = () => {
     const loadUserData = async () => {
       if (currentUser && supabase) {
         try {
-          const { data: profile } = await supabase
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
-            .single();
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error loading profile:', error);
+          }
 
           if (profile) {
             const nameParts = (profile.display_name || '').split(' ');
@@ -150,63 +159,73 @@ const Checkout = () => {
   }, [addresses, defaultAddress, addressesLoading, currentUser]);
 
   const createNewOrder = async () => {
-    if (!cartItems || cartItems.length === 0) {
-      toast.error('Your cart is empty');
+    if (!cartItems || cartItems.length === 0 || !currentUser) {
+      toast.error('Cannot create order - cart empty or user not logged in');
       navigate('/cart');
       return;
     }
 
+    console.log('Creating new pending order');
     const DELIVERY_FEE = 40;
-    const orderData = {
-      orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
-      subtotal: totalPrice,
-      deliveryFee: DELIVERY_FEE,
-      total: totalPrice + DELIVERY_FEE,
-      items: cartItems,
-      status: 'pending',
-    };
+    
+    try {
+      // Format the cart items for storage
+      const serializedItems = cartItems.map(item => ({
+        id: item.id || `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        size: item.size,
+        image: item.image,
+        productId: item.productId
+      }));
+      
+      // Generate order number
+      const orderNumber = `B3F-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+      
+      // Create order data object
+      const orderData = {
+        orderNumber,
+        subtotal: totalPrice,
+        deliveryFee: DELIVERY_FEE,
+        total: totalPrice + DELIVERY_FEE,
+        items: cartItems,
+        status: 'pending',
+      };
+      
+      setCurrentOrder(orderData);
+      
+      // Create order in database
+      const { data, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          order_number: orderNumber,
+          total: totalPrice + DELIVERY_FEE,
+          delivery_fee: DELIVERY_FEE,
+          items: serializedItems,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          payment_method: 'pending',
+          payment_details: { status: 'pending' }
+        })
+        .select()
+        .single();
 
-    setCurrentOrder(orderData);
-
-    if (currentUser && supabase) {
-      try {
-        // Convert cart items to a format that can be stored in Supabase
-        const serializedItems = cartItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          size: item.size,
-          image: item.image,
-          productId: item.productId
-        }));
-
-        const { data, error } = await supabase
-          .from('orders')
-          .insert({
-            user_id: currentUser.id,
-            user_email: currentUser.email,
-            order_number: orderData.orderNumber,
-            total: orderData.total,
-            delivery_fee: orderData.deliveryFee,
-            items: serializedItems,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            payment_method: 'pending'
-          })
-          .select('id')
-          .single();
-
-        if (error) throw error;
-
+      if (error) {
+        console.error('Failed to create order:', error);
+        toast.error('Failed to prepare order');
+      } else {
+        console.log('Order created successfully:', data);
         setCurrentOrder({
           ...orderData,
           id: data.id,
         });
-      } catch (error) {
-        console.error('Error creating order:', error);
-        toast.error('Failed to create new order');
       }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Failed to create new order');
     }
   };
 
@@ -262,8 +281,9 @@ const Checkout = () => {
         email: values.email,
       };
 
-      if (currentUser && supabase && currentOrder && useNewAddress) {
+      if (currentUser && supabase && useNewAddress) {
         try {
+          // Save new address to database if this is a new address
           await supabase.from('addresses').insert({
             user_id: currentUser.id,
             name: `${values.firstName} ${values.lastName}`, 
@@ -272,26 +292,36 @@ const Checkout = () => {
             state: values.state,
             zipcode: values.zipCode,
             country: values.country,
-            phone: values.phone,
-            is_default: addresses.length === 0,
+            phone: values.phone || '',
+            is_default: addresses.length === 0, // Make default if first address
           });
+          console.log('Address saved to database');
         } catch (error) {
           console.error('Error saving address to database:', error);
         }
       }
 
-      if (currentUser && supabase && currentOrder) {
-        await supabase
+      if (currentUser && supabase && currentOrder?.id) {
+        // Update order with shipping address
+        const { error } = await supabase
           .from('orders')
           .update({
             shipping_address: shippingAddress,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentOrder.id);
+          
+        if (error) {
+          console.error('Error updating order shipping address:', error);
+          throw error;
+        }
+        
+        console.log('Order updated with shipping address');
       }
 
       toast.success('Shipping info saved successfully');
 
+      // Proceed to payment page
       setTimeout(() => {
         navigate('/payment', {
           state: { shippingAddress },

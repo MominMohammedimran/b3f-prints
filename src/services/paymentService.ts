@@ -57,6 +57,9 @@ export class PaymentService {
         timestamp: new Date().toISOString()
       };
       
+      console.log('Creating order with payment details:', paymentDetails);
+      console.log('Shipping address:', shippingAddress);
+      
       // Create the order in the database
       const { data, error } = await this.supabase
         .from('orders')
@@ -77,7 +80,10 @@ export class PaymentService {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating order:', error);
+        throw error;
+      }
       return data;
     } catch (error) {
       console.error('Error creating order:', error);
@@ -140,6 +146,8 @@ export class PaymentService {
     paymentDetails: any = {}
   ) {
     try {
+      console.log('Processing payment with method:', paymentMethod);
+      
       // Ensure all cart items have required id property
       const validatedCartItems: CartItem[] = cartItems.map(item => ({
         ...item,

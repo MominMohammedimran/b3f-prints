@@ -70,7 +70,38 @@ const AdminLogin = () => {
     setError(null);
     
     try {
-      // First, sign in with email/password
+      // For the specific admin email, use direct admin check first
+      if (email === 'b3fprintingsolutions@gmail.com') {
+        // Check if email exists in admin_users table regardless of auth
+        const { data: adminCheck, error: adminCheckError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (adminCheckError) {
+          console.error('Error checking admin status:', adminCheckError);
+        }
+        
+        // If admin exists in table, proceed with normal auth
+        if (!adminCheck) {
+          console.log('Creating admin account for', email);
+          // Insert admin record if it doesn't exist
+          const { error: insertError } = await supabase
+            .from('admin_users')
+            .insert({
+              email: email,
+              role: 'super_admin',
+              permissions: ['products.all', 'orders.all', 'users.all']
+            });
+            
+          if (insertError) {
+            console.error('Error creating admin account:', insertError);
+          }
+        }
+      }
+      
+      // Sign in with email/password
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -84,7 +115,7 @@ const AdminLogin = () => {
         throw new Error('No user returned after login');
       }
       
-      // Now check if this user is in admin_users table
+      // Check if this user is in admin_users table
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
@@ -92,12 +123,21 @@ const AdminLogin = () => {
         .maybeSingle();
       
       if (adminError) {
-        throw new Error('Error verifying admin status');
+        console.error('Error verifying admin status:', adminError);
+        throw new Error('Error verifying admin status: ' + adminError.message);
       }
       
       if (adminData) {
         // Cast to proper type
         const admin = adminData as AdminRecord;
+        
+        // Update user_id if not set
+        if (!admin.user_id) {
+          await supabase
+            .from('admin_users')
+            .update({ user_id: data.user.id })
+            .eq('id', admin.id);
+        }
         
         // Successfully authenticated as admin
         toast.success('Login successful!');
@@ -110,6 +150,37 @@ const AdminLogin = () => {
         // Redirect to admin dashboard
         navigate('/admin/dashboard');
       } else {
+        // If user authenticated but not in admin table, add them for our designated admin
+        if (email === 'b3fprintingsolutions@gmail.com') {
+          const { data: insertData, error: insertError } = await supabase
+            .from('admin_users')
+            .insert({
+              email: email,
+              user_id: data.user.id,
+              role: 'super_admin',
+              permissions: ['products.all', 'orders.all', 'users.all']
+            })
+            .select()
+            .single();
+            
+          if (insertError) {
+            throw new Error('Error creating admin account: ' + insertError.message);
+          }
+          
+          if (insertData) {
+            toast.success('Admin account created and login successful!');
+            
+            // Store admin role in localStorage
+            localStorage.setItem('adminRole', 'super_admin');
+            localStorage.setItem('adminId', data.user.id);
+            localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
+            
+            // Redirect to admin dashboard
+            navigate('/admin/dashboard');
+            return;
+          }
+        }
+        
         // User exists but is not an admin
         await supabase.auth.signOut();
         throw new Error('User is not authorized as admin');
