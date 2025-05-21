@@ -135,7 +135,9 @@ const AdminLogin = () => {
         if (!admin.user_id) {
           await supabase
             .from('admin_users')
-            .update({ user_id: data.user.id })
+            .update({ 
+              user_id: data.user.id 
+            })
             .eq('id', admin.id);
         }
         
