@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +11,8 @@ import { User } from '@supabase/supabase-js';
 interface AdminRecord {
   id: string;
   email: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   role?: string;
   user_id?: string;
   permissions?: string[];
@@ -132,11 +131,15 @@ const AdminLogin = () => {
         const admin = adminData as AdminRecord;
         
         // Update user_id if not set
-        if (!admin.user_id) {
-          await supabase
+        if (!admin.user_id && data.user.id) {
+          const { error: updateError } = await supabase
             .from('admin_users')
             .update({ user_id: data.user.id })
             .eq('id', admin.id);
+            
+          if (updateError) {
+            console.error('Error updating admin user_id:', updateError);
+          }
         }
         
         // Successfully authenticated as admin
@@ -159,26 +162,22 @@ const AdminLogin = () => {
               user_id: data.user.id,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all']
-            })
-            .select()
-            .single();
+            });
             
           if (insertError) {
             throw new Error('Error creating admin account: ' + insertError.message);
           }
           
-          if (insertData) {
-            toast.success('Admin account created and login successful!');
-            
-            // Store admin role in localStorage
-            localStorage.setItem('adminRole', 'super_admin');
-            localStorage.setItem('adminId', data.user.id);
-            localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
-            
-            // Redirect to admin dashboard
-            navigate('/admin/dashboard');
-            return;
-          }
+          toast.success('Admin account created and login successful!');
+          
+          // Store admin role in localStorage
+          localStorage.setItem('adminRole', 'super_admin');
+          localStorage.setItem('adminId', data.user.id);
+          localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
+          
+          // Redirect to admin dashboard
+          navigate('/admin/dashboard');
+          return;
         }
         
         // User exists but is not an admin

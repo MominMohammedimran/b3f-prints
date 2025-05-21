@@ -3,8 +3,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define interfaces for better type safety
+interface InventoryItem {
+  size: string;
+  quantity: number;
+}
+
+interface ProductInventory {
+  [productType: string]: {
+    [size: string]: number;
+  };
+}
+
 export const useProductInventory = () => {
-  const [sizeInventory, setSizeInventory] = useState<Record<string, Record<string, number>>>({});
+  const [sizeInventory, setSizeInventory] = useState<ProductInventory>({});
   const [loading, setLoading] = useState(false);
 
   const fetchProductInventory = useCallback(async () => {
@@ -13,35 +25,48 @@ export const useProductInventory = () => {
       // Get inventory data from the database for all products
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, product_type, inventory');
+        .select('id, name, category, stock')
+        .in('category', ['tshirt', 'mug', 'cap']);
       
       if (error) {
         throw error;
       }
       
       // Format the inventory data
-      const inventoryData: Record<string, Record<string, number>> = {};
-      data?.forEach(product => {
-        const productType = product.product_type || '';
-        if (!product.inventory) {
-          // Default inventory if none exists
-          switch (productType.toLowerCase()) {
-            case 'tshirt':
-              inventoryData[productType] = { S: 10, M: 15, L: 8, XL: 5 };
-              break;
-            case 'mug':
-              inventoryData[productType] = { Standard: 20 };
-              break;
-            case 'cap':
-              inventoryData[productType] = { Standard: 12 };
-              break;
-            default:
-              inventoryData[productType] = { Standard: 10 };
+      const inventoryData: ProductInventory = {
+        tshirt: { S: 10, M: 15, L: 8, XL: 5 },
+        mug: { Standard: 20 },
+        cap: { Standard: 12 }
+      };
+      
+      if (data) {
+        // Group products by category and merge stock data
+        data.forEach(product => {
+          const productType = product.category?.toLowerCase() || '';
+          if (productType && ['tshirt', 'mug', 'cap'].includes(productType)) {
+            // Ensure the category exists in our inventory object
+            if (!inventoryData[productType]) {
+              inventoryData[productType] = {};
+            }
+            
+            // Determine sizes based on product type
+            const sizes = productType === 'tshirt' 
+              ? ['S', 'M', 'L', 'XL'] 
+              : ['Standard'];
+            
+            // Set stock values from database if available
+            if (typeof product.stock === 'number') {
+              // If only a generic stock value, distribute across sizes
+              const stockPerSize = Math.floor(product.stock / sizes.length);
+              sizes.forEach(size => {
+                if (!(size in inventoryData[productType])) {
+                  inventoryData[productType][size] = stockPerSize;
+                }
+              });
+            }
           }
-        } else {
-          inventoryData[productType] = product.inventory;
-        }
-      });
+        });
+      }
       
       setSizeInventory(inventoryData);
     } catch (err) {
@@ -62,7 +87,7 @@ export const useProductInventory = () => {
     fetchProductInventory();
   }, [fetchProductInventory]);
 
-  const updateInventory = async (productType: string, size: string, change: number) => {
+  const updateInventory = async (productType: string, size: string, change: number): Promise<boolean> => {
     try {
       // Calculate the new quantity
       const currentQuantity = sizeInventory[productType]?.[size] || 0;
@@ -71,8 +96,8 @@ export const useProductInventory = () => {
       // Get products of this type
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, inventory')
-        .eq('product_type', productType);
+        .select('id, stock')
+        .eq('category', productType);
         
       if (productsError) {
         throw productsError;
@@ -81,12 +106,14 @@ export const useProductInventory = () => {
       // Update all products of this type
       if (products && products.length > 0) {
         for (const product of products) {
-          const currentInventory = product.inventory || {};
-          const updatedInventory = { ...currentInventory, [size]: newQuantity };
+          // Update stock value based on size change
+          const currentStock = product.stock || 0;
+          const stockChange = productType === 'tshirt' ? change : change * 4; // Adjust change based on product type
+          const newStock = Math.max(0, currentStock + stockChange);
           
           const { error: updateError } = await supabase
             .from('products')
-            .update({ inventory: updatedInventory })
+            .update({ stock: newStock })
             .eq('id', product.id);
             
           if (updateError) {
