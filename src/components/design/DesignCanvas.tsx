@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { fabric } from 'fabric';
 import { Undo, Redo, Trash, X } from 'lucide-react';
-import BoundaryBox from './BoundaryBox';
 
 interface DesignCanvasProps {
   activeProduct: string;
@@ -176,34 +175,32 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({
       </div>
       
       <div 
-        className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center mt-4 relative" 
+        className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center mt-4" 
         style={{ 
           height: activeProduct === 'tshirt' ? '300px' : activeProduct === 'mug' ? '300px' : '300px', 
-          width: '90%', margin: 'auto', marginTop: '5px'
+          width: '90%' ,margin:'auto',marginTop:'5px'
         }}
       >
-        {/* Add the dynamic boundary box */}
-        <BoundaryBox productType={activeProduct} />
-        
         <canvas id="design-canvas" ref={canvasRef}></canvas>
       </div>
       
       {/* Design guidance and status */}
       <div className="mt-4 p-3 bg-blue-50 rounded-lg text-center">
-        <h3 className="text-base sm:text-lg font-medium text-blue-700">Design Status:</h3>
-        <ul className="text-sm sm:text-lg flex flex-wrap justify-center gap-3 text-blue-600 items-center mt-2">
-          {Object.entries(designComplete).map(([side, isComplete]) => (
-            <li key={side} className="flex items-center gap-1">
-              <span className={`${isComplete ? 'text-green-500' : 'text-gray-400'}`}>
-                {isComplete ? '✓' : '○'}
-              </span>
-              <span>
-                {side.charAt(0).toUpperCase() + side.slice(1)} {isComplete ? 'complete' : 'incomplete'}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+  <h3 className="text-base sm:text-lg font-medium text-blue-700">Design Status:</h3>
+  <ul className="text-sm sm:text-lg flex flex-wrap justify-center gap-3 text-blue-600 items-center mt-2">
+    {Object.entries(designComplete).map(([side, isComplete]) => (
+      <li key={side} className="flex items-center gap-1">
+        <span className={`${isComplete ? 'text-green-500' : 'text-gray-400'}`}>
+          {isComplete ? '✓' : '○'}
+        </span>
+        <span>
+          {side.charAt(0).toUpperCase() + side.slice(1)} {isComplete ? 'complete' : 'incomplete'}
+        </span>
+      </li>
+    ))}
+  </ul>
+</div>
+
     </div>
   );
 };
