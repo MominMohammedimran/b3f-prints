@@ -39,6 +39,15 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
   onAddToCart,
   validateDesign
 }) => {
+  // Make sure sizeInventory and necessary nested objects exist
+  const availableStock = sizeInventory && 
+                        sizeInventory[activeProduct] && 
+                        sizeInventory[activeProduct][selectedSize] !== undefined ? 
+                        sizeInventory[activeProduct][selectedSize] : 0;
+  
+  // Check if product exists
+  const productExists = products && products[activeProduct];
+  
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 pt-0 mb-6 sticky top-20">
       <ProductViewSelector 
@@ -54,7 +63,7 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
       {/* Available stock info */}
       <div className="mt-2 p-2 bg-gray-50 rounded-md">
         <p className="text-sm text-gray-600">
-          Available stock: <span className="font-medium">{sizeInventory[activeProduct][selectedSize] || 0}</span> items
+          Available stock: <span className="font-medium">{availableStock}</span> items
         </p>
       </div>
       
@@ -91,7 +100,7 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
         <div className="flex justify-between mb-4">
           <h2 className="text-lg font-semibold">Product Details</h2>
           <div className="font-bold text-green-600">
-            {formatIndianRupees(isDualSided && activeProduct === 'tshirt' ? 300 : products[activeProduct]?.price)}
+            {formatIndianRupees(isDualSided && activeProduct === 'tshirt' ? 300 : (productExists ? products[activeProduct].price : 0))}
           </div>
         </div>
         
@@ -105,9 +114,9 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
           
           <button
             onClick={onAddToCart}
-            disabled={!validateDesign() || sizeInventory[activeProduct][selectedSize] <= 0}
+            disabled={!validateDesign() || availableStock <= 0}
             className={`flex-1 px-4 py-2 text-white rounded-md ${
-              !validateDesign() || sizeInventory[activeProduct][selectedSize] <= 0 
+              !validateDesign() || availableStock <= 0 
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-green-600 hover:bg-green-700'
             }`}
@@ -125,7 +134,7 @@ const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
             }
           </p>
         )}
-        {sizeInventory[activeProduct][selectedSize] <= 0 && (
+        {availableStock <= 0 && (
           <p className="mt-2 text-sm text-red-500">
             This size is currently out of stock
           </p>
