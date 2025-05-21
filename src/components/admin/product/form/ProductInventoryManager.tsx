@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +39,7 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
       // Get current inventory from the database
       const { data, error } = await supabase
         .from('products')
-        .select('stock')
+        .select('inventory')
         .eq('id', productId)
         .single();
       
@@ -51,53 +50,23 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         return;
       }
       
-      const stock = data?.stock || 0;
-      initializeInventoryFromStock(stock);
+      if (data?.inventory) {
+        // If inventory exists in database, use it
+        const items: InventoryItem[] = [];
+        for (const [size, quantity] of Object.entries(data.inventory)) {
+          items.push({ size, quantity: Number(quantity) });
+        }
+        setInventory(items);
+      } else {
+        // Otherwise initialize with defaults
+        initializeDefaultInventory();
+      }
     } catch (error) {
       console.error('Error loading inventory:', error);
       initializeDefaultInventory();
     } finally {
       setLoading(false);
     }
-  };
-  
-  const initializeInventoryFromStock = (stock: number) => {
-    let defaultItems: InventoryItem[] = [];
-    
-    // Initialize based on product type
-    switch (productType.toLowerCase()) {
-      case 'tshirt':
-        // Distribute stock across sizes
-        const sizesCount = 5; // S, M, L, XL, XXL
-        const baseStock = Math.floor(stock / sizesCount);
-        defaultItems = [
-          { size: 'S', quantity: Math.max(0, baseStock + (initialInventory?.S || 0)) },
-          { size: 'M', quantity: Math.max(0, baseStock + (initialInventory?.M || 0)) },
-          { size: 'L', quantity: Math.max(0, baseStock + (initialInventory?.L || 0)) },
-          { size: 'XL', quantity: Math.max(0, baseStock + (initialInventory?.XL || 0)) },
-          { size: 'XXL', quantity: Math.max(0, baseStock + (initialInventory?.XXL || 0)) }
-        ];
-        break;
-        
-      case 'mug':
-        defaultItems = [
-          { size: 'Standard', quantity: Math.max(0, stock + (initialInventory?.Standard || 0)) }
-        ];
-        break;
-        
-      case 'cap':
-        defaultItems = [
-          { size: 'Standard', quantity: Math.max(0, stock + (initialInventory?.Standard || 0)) }
-        ];
-        break;
-        
-      default:
-        defaultItems = [
-          { size: 'Standard', quantity: Math.max(0, stock + (initialInventory?.Standard || 0)) }
-        ];
-    }
-    
-    setInventory(defaultItems);
   };
   
   const initializeDefaultInventory = () => {
@@ -107,29 +76,29 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
     switch (productType.toLowerCase()) {
       case 'tshirt':
         defaultItems = [
-          { size: 'S', quantity: initialInventory?.S || 10 },
-          { size: 'M', quantity: initialInventory?.M || 15 },
-          { size: 'L', quantity: initialInventory?.L || 10 },
-          { size: 'XL', quantity: initialInventory?.XL || 5 },
+          { size: 'S', quantity: initialInventory?.S || 0 },
+          { size: 'M', quantity: initialInventory?.M || 0 },
+          { size: 'L', quantity: initialInventory?.L || 0 },
+          { size: 'XL', quantity: initialInventory?.XL || 0 },
           { size: 'XXL', quantity: initialInventory?.XXL || 0 }
         ];
         break;
         
       case 'mug':
         defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 20 }
+          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
         ];
         break;
         
       case 'cap':
         defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 12 }
+          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
         ];
         break;
         
       default:
         defaultItems = [
-          { size: 'Standard', quantity: initialInventory?.Standard || 10 }
+          { size: 'Standard', quantity: initialInventory?.Standard || 0 }
         ];
     }
     
@@ -165,14 +134,11 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         inventoryObject[item.size] = item.quantity;
       });
       
-      // Calculate total stock for the main product entry
-      const totalStock = inventory.reduce((sum, item) => sum + item.quantity, 0);
-      
-      // Update stock in the products table
+      // Update inventory in database
       const { error } = await supabase
         .from('products')
         .update({
-          stock: totalStock,
+          inventory: inventoryObject,
           updated_at: new Date().toISOString()
         })
         .eq('id', productId);

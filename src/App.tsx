@@ -1,10 +1,11 @@
 
 import React, { useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes';
 import { Toaster } from 'sonner'; 
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import { LocationProvider } from './context/LocationContext';
+import AuthProvider from './context/AuthContext';
+import CartProvider from './context/CartContext';
+import LocationProvider from './context/LocationContext';
 import { initializeAppSecurity } from './utils/initializeSecurity';
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <BrowserRouter>
       <AuthProvider>
         <LocationProvider>
           <CartProvider>
@@ -23,7 +24,7 @@ function App() {
           </CartProvider>
         </LocationProvider>
       </AuthProvider>
-    </>
+    </BrowserRouter>
   );
 }
 
