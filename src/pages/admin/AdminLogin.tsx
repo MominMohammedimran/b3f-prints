@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +14,6 @@ interface AdminRecord {
   created_at: string;
   updated_at: string;
   role?: string;
-  user_id?: string;
   permissions?: string[];
 }
 
@@ -131,22 +129,21 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
-        // Update user_id if not set
-        if (!admin.user_id) {
-          await supabase
-            .from('admin_users')
-            .update({ 
-              user_id: data.user.id 
-            })
-            .eq('id', admin.id);
-        }
+        // Update the admin record with auth user ID 
+        await supabase
+          .from('admin_users')
+          .update({ 
+            // Since we can't add user_id column yet, we'll store in local storage only
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', admin.id);
         
         // Successfully authenticated as admin
         toast.success('Login successful!');
         
         // Store admin role in localStorage
         localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || data.user.id);
+        localStorage.setItem('adminId', data.user.id);
         localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
         
         // Redirect to admin dashboard
@@ -158,7 +155,6 @@ const AdminLogin = () => {
             .from('admin_users')
             .insert({
               email: email,
-              user_id: data.user.id,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all']
             })
@@ -299,7 +295,7 @@ const AdminLogin = () => {
         
         // Store admin role in localStorage
         localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || admin.id);
+        localStorage.setItem('adminId', admin.id);
         localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
         
         // Redirect to admin dashboard

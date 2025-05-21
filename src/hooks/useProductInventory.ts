@@ -13,33 +13,43 @@ export const useProductInventory = () => {
       // Get inventory data from the database for all products
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, product_type, inventory');
+        .select('id, name, category, stock');
       
       if (error) {
         throw error;
       }
       
       // Format the inventory data
-      const inventoryData: Record<string, Record<string, number>> = {};
+      const inventoryData: Record<string, Record<string, number>> = {
+        tshirt: { S: 10, M: 15, L: 8, XL: 5 },
+        mug: { Standard: 20 },
+        cap: { Standard: 12 }
+      };
+      
+      // Update with actual stock data if available
       data?.forEach(product => {
-        const productType = product.product_type || '';
-        if (!product.inventory) {
-          // Default inventory if none exists
-          switch (productType.toLowerCase()) {
-            case 'tshirt':
-              inventoryData[productType] = { S: 10, M: 15, L: 8, XL: 5 };
-              break;
-            case 'mug':
-              inventoryData[productType] = { Standard: 20 };
-              break;
-            case 'cap':
-              inventoryData[productType] = { Standard: 12 };
-              break;
-            default:
-              inventoryData[productType] = { Standard: 10 };
+        // Determine product type from category or name
+        let productType = 'unknown';
+        if (product.category?.toLowerCase().includes('tshirt')) {
+          productType = 'tshirt';
+        } else if (product.category?.toLowerCase().includes('mug')) {
+          productType = 'mug';
+        } else if (product.category?.toLowerCase().includes('cap')) {
+          productType = 'cap';
+        } else if (product.name?.toLowerCase().includes('tshirt')) {
+          productType = 'tshirt';
+        } else if (product.name?.toLowerCase().includes('mug')) {
+          productType = 'mug';
+        } else if (product.name?.toLowerCase().includes('cap')) {
+          productType = 'cap';
+        }
+
+        // Update stock for the first size
+        if (productType !== 'unknown') {
+          const firstSize = Object.keys(inventoryData[productType])[0];
+          if (firstSize && product.stock !== undefined) {
+            inventoryData[productType][firstSize] = product.stock;
           }
-        } else {
-          inventoryData[productType] = product.inventory;
         }
       });
       
@@ -68,11 +78,11 @@ export const useProductInventory = () => {
       const currentQuantity = sizeInventory[productType]?.[size] || 0;
       const newQuantity = Math.max(0, currentQuantity + change); // Ensure non-negative
       
-      // Get products of this type
+      // Get products of this type (using category as a proxy for product_type)
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, inventory')
-        .eq('product_type', productType);
+        .select('id, stock')
+        .ilike('category', `%${productType}%`);
         
       if (productsError) {
         throw productsError;
@@ -81,18 +91,21 @@ export const useProductInventory = () => {
       // Update all products of this type
       if (products && products.length > 0) {
         for (const product of products) {
-          const currentInventory = product.inventory || {};
-          const updatedInventory = { ...currentInventory, [size]: newQuantity };
-          
+          // Update the stock field for compatibility
           const { error: updateError } = await supabase
             .from('products')
-            .update({ inventory: updatedInventory })
+            .update({ 
+              stock: newQuantity,
+              updated_at: new Date().toISOString() 
+            })
             .eq('id', product.id);
             
           if (updateError) {
             console.error(`Error updating inventory for product ${product.id}:`, updateError);
           }
         }
+      } else {
+        console.warn(`No products found for type: ${productType}`);
       }
       
       // Update local state

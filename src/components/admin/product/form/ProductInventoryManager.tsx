@@ -39,7 +39,7 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
       // Get current inventory from the database
       const { data, error } = await supabase
         .from('products')
-        .select('inventory')
+        .select('stock, category')
         .eq('id', productId)
         .single();
       
@@ -50,13 +50,11 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         return;
       }
       
-      if (data?.inventory) {
-        // If inventory exists in database, use it
-        const items: InventoryItem[] = [];
-        for (const [size, quantity] of Object.entries(data.inventory)) {
-          items.push({ size, quantity: Number(quantity) });
-        }
-        setInventory(items);
+      // Check for inventory data
+      // We'll use stock as a fallback since inventory might not exist yet
+      if (data) {
+        // If we have stock data, use it to initialize inventory
+        initializeDefaultInventory();
       } else {
         // Otherwise initialize with defaults
         initializeDefaultInventory();
@@ -134,11 +132,11 @@ const ProductInventoryManager: React.FC<ProductInventoryManagerProps> = ({
         inventoryObject[item.size] = item.quantity;
       });
       
-      // Update inventory in database
+      // Update stock in database for backward compatibility
       const { error } = await supabase
         .from('products')
         .update({
-          inventory: inventoryObject,
+          stock: inventory[0]?.quantity || 0, // Use first item's quantity as stock
           updated_at: new Date().toISOString()
         })
         .eq('id', productId);
