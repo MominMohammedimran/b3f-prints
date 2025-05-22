@@ -22,7 +22,7 @@ import ResetPassword from './pages/ResetPassword';
 import DesignTool from './pages/DesignTool';
 import AuthCallback from './pages/AuthCallback';
 import Wishlist from './pages/Wishlist';
-
+import Account from './pages/Account'
 // Admin routes
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -63,11 +63,12 @@ const AppRoutes = () => {
       <Route path="/order-complete" element={<OrderComplete />} />
       <Route path="/orders" element={<Orders />} />
       <Route path="/profile" element={<UserProfile />} />
+       <Route path="/account" element={<Account />} />
       <Route path="/track-order" element={<TrackOrder />} />
       <Route path="/track-order/:orderId" element={<TrackOrder />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/design-tool" element={<DesignTool />} />
-      <Route path="/design-tool/:productCode" element={<DesignTool />} />
+      <Route path="/design-tool/:productkey" element={<DesignTool />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/wishlist" element={<Wishlist />} />
 

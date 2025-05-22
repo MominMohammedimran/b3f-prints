@@ -20,7 +20,6 @@ function App() {
         <CartProvider>
           <ActiveProductProvider>
           <AppRoutes />
-          <Toaster />
           </ActiveProductProvider>
         </CartProvider>
       </LocationProvider>
