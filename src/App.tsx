@@ -4,6 +4,7 @@ import AppRoutes from './routes';
 import { Toaster } from 'sonner'; 
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import {ActiveProductProvider } from './context/ActiveProductContext'
 import { LocationProvider } from './context/LocationContext';
 import { initializeAppSecurity } from './utils/initializeSecurity';
 
@@ -17,8 +18,10 @@ function App() {
     <AuthProvider>
       <LocationProvider>
         <CartProvider>
+          <ActiveProductProvider>
           <AppRoutes />
           <Toaster />
+          </ActiveProductProvider>
         </CartProvider>
       </LocationProvider>
     </AuthProvider>

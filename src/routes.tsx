@@ -2,6 +2,8 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import Search from './pages/Search';
+import Index from './pages/Index';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import Cart from './pages/Cart';
@@ -45,13 +47,15 @@ import AdminAuthGuard from './components/admin/AdminAuthGuard';
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Index />} />
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/cart" element={<Cart />} />
+       <Route path="/search" element={<Search />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/product/:productId" element={<ProductDetails />} />
+       <Route path="/product/details/:productId" element={<ProductDetails />} />
       <Route path="/products" element={<Products />} />
       <Route path="/products/:category" element={<Products />} />
       <Route path="/about-us" element={<AboutUs />} />
