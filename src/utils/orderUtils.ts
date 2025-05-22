@@ -1,5 +1,6 @@
 
 import { Order, CartItem, ShippingAddress } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Generate a unique order ID
@@ -92,6 +93,7 @@ export const getOrderStatusMessage = (status: string): string => {
     case 'cancelled':
       return 'Your order has been cancelled.';
     case 'order_placed':
+    case 'order placed':
       return 'Your order has been placed successfully.';
     default:
       return 'Order received.';
@@ -99,102 +101,76 @@ export const getOrderStatusMessage = (status: string): string => {
 };
 
 /**
- * Parse order items from various formats
- * @param items order items in various formats
- * @returns array of CartItem objects
+ * Create an order in the database
+ * @param orderData Order data to save
+ * @returns The created order or null if failed
  */
-export const parseOrderItems = (items: any): CartItem[] => {
-  if (!items) return [];
-  
-  // If items is a string, try to parse it as JSON
-  if (typeof items === 'string') {
-    try {
-      items = JSON.parse(items);
-    } catch (e) {
-      console.error('Failed to parse order items string:', e);
-      return [];
+export const createOrder = async (orderData: Partial<Order>): Promise<Order | null> => {
+  try {
+    // Make sure we have the required fields
+    if (!orderData.user_id || !orderData.items || !orderData.total) {
+      console.error('Missing required order fields');
+      return null;
     }
+    
+    // Generate an order number if none provided
+    const orderNumber = orderData.order_number || `ORD-${Date.now()}`;
+    
+    // Insert the order into the database
+    const { data, error } = await supabase
+      .from('orders')
+      .insert({
+        ...orderData,
+        order_number: orderNumber,
+        status: orderData.status || 'processing',
+        payment_method: orderData.payment_method || 'razorpay',
+        date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
+      .single();
+    
+    if (error) {
+      console.error('Error creating order:', error);
+      return null;
+    }
+    
+    return data as Order;
+  } catch (error) {
+    console.error('Failed to create order:', error);
+    return null;
   }
-  
-  // Ensure items is an array
-  if (!Array.isArray(items)) {
-    console.error('Order items is not an array:', items);
-    return [];
+};
+
+/**
+ * Update payment details for an order
+ * @param orderId The ID of the order to update
+ * @param paymentDetails Payment details to save
+ * @returns boolean indicating success
+ */
+export const updateOrderPaymentDetails = async (
+  orderId: string,
+  paymentDetails: any
+): Promise<boolean> => {
+  try {
+    // Update the order with payment details
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        payment_details: paymentDetails,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+    
+    if (error) {
+      console.error('Error updating order payment details:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to update order payment details:', error);
+    return false;
   }
-  
-  // Convert each item to CartItem format
-  return items.map(item => ({
-    id: item.id || item.productId || `item-${Math.random().toString(36).substr(2, 9)}`,
-    productId: item.productId || item.id || '',
-    name: item.name || 'Product',
-    price: item.price || 0,
-    quantity: item.quantity || 1,
-    image: item.image || '',
-    size: item.size,
-    color: item.color,
-    options: item.options
-  }));
-};
-
-/**
- * Format order data to consistent format
- * @param order The order object
- * @returns Standardized order object
- */
-export const normalizeOrderData = (order: any): Order => {
-  if (!order) return {} as Order;
-  
-  return {
-    id: order.id || '',
-    order_number: order.order_number || order.orderNumber || '',
-    orderNumber: order.order_number || order.orderNumber || '',
-    user_id: order.user_id || '',
-    user_email: order.user_email || '',
-    items: parseOrderItems(order.items),
-    total: order.total || 0,
-    status: order.status || 'processing',
-    payment_method: order.payment_method || order.paymentMethod || 'cod',
-    paymentMethod: order.payment_method || order.paymentMethod || 'cod',
-    shipping_address: order.shipping_address || order.shippingAddress || {},
-    shippingAddress: order.shipping_address || order.shippingAddress || {},
-    delivery_fee: order.delivery_fee || order.deliveryFee || 0,
-    deliveryFee: order.delivery_fee || order.deliveryFee || 0,
-    created_at: order.created_at || order.date || new Date().toISOString(),
-    updated_at: order.updated_at || new Date().toISOString(),
-    date: order.date || order.created_at || new Date().toISOString(),
-    cancellation_reason: order.cancellation_reason || ''
-  };
-};
-
-/**
- * Calculate estimated delivery date (5 days from order date)
- * @param orderDate the date when order was placed
- * @returns estimated delivery date as string
- */
-export const calculateEstimatedDelivery = (orderDate: string | Date): string => {
-  const date = new Date(orderDate);
-  date.setDate(date.getDate() + 5);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
-/**
- * Serialize cart items for storage
- * @param items cart items to serialize 
- * @returns serialized cart items ready for storage
- */
-export const serializeCartItems = (items: CartItem[]): any[] => {
-  return items.map(item => ({
-    id: item.id,
-    name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-    size: item.size,
-    image: item.image,
-    productId: item.productId,
-    color: item.color
-  }));
 };

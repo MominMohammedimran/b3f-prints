@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AdminLoginForm from '@/components/admin/AdminLoginForm';
 import AdminOTPForm from '@/components/admin/AdminOTPForm';
 import { User } from '@supabase/supabase-js';
-import { ensureMainAdminExists } from '@/utils/adminAuth';
+import { ensureMainAdminExists, DEFAULT_ADMIN_PERMISSIONS } from '@/utils/adminAuth';
 
 // Define proper interface for admin records with all required fields
 interface AdminRecord {
@@ -142,25 +142,13 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
-        // Update user_id if not set
-        if (!admin.user_id) {
-          await supabase
-            .from('admin_users')
-            .update({ 
-              user_id: data.user.id,
-              role: admin.role || 'admin',
-              permissions: admin.permissions || []
-            } as AdminRecord)
-            .eq('id', admin.id);
-        }
+        // Store admin role in localStorage
+        localStorage.setItem('adminRole', admin.role || 'admin');
+        localStorage.setItem('adminId', admin.id);
+        localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || DEFAULT_ADMIN_PERMISSIONS));
         
         // Successfully authenticated as admin
         toast.success('Login successful!');
-        
-        // Store admin role in localStorage
-        localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || data.user.id);
-        localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
         
         // Redirect to admin dashboard
         navigate('/admin/dashboard');
