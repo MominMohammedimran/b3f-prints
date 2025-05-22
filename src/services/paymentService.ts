@@ -1,7 +1,6 @@
 
 import { toast } from 'sonner';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { serializeCartItems } from '@/utils/orderUtils';
 import { CartItem } from '@/lib/types'; // Import the correct CartItem type
 
 interface ShippingAddress {
@@ -20,6 +19,28 @@ interface ShippingAddress {
   phone?: string;
   email?: string;
 }
+
+/**
+ * Serialize cart items for storage in database
+ * @param items Array of cart items
+ * @returns JSON serializable object
+ */
+export const serializeCartItems = (items: CartItem[]) => {
+  // Convert CartItem[] to a plain JSON object that can be stored in Supabase
+  return items.map(item => ({
+    id: item.id || `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    image: item.image || '',
+    size: item.size || '',
+    color: item.color || '',
+    options: item.options || {},
+    productId: item.productId || item.id,
+    view: item.view || '',
+    backImage: item.backImage || '',
+  }));
+};
 
 /**
  * Service for handling payment-related operations

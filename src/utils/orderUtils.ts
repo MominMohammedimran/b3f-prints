@@ -319,3 +319,55 @@ export const calculateEstimatedDelivery = (orderDate: Date, daysToAdd: number = 
   
   return deliveryDate.toISOString();
 };
+
+/**
+ * Update inventory levels when an order is placed
+ * @param items The ordered items
+ * @returns Boolean indicating success
+ */
+export const updateInventoryLevels = async (items: CartItem[]): Promise<boolean> => {
+  try {
+    for (const item of items) {
+      if (item.size && item.quantity) {
+        const productType = item.productId?.split('-')[0] || 'tshirt';
+        
+        // Get current inventory level
+        const { data, error } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('category', 'inventory')
+          .eq('name', `${productType}_${item.size}`)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Error fetching inventory:', error);
+          continue;
+        }
+        
+        // If product exists, update the stock level
+        if (data) {
+          const newStock = Math.max(0, (data.stock || 0) - item.quantity);
+          
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ stock: newStock })
+            .eq('category', 'inventory')
+            .eq('name', `${productType}_${item.size}`);
+            
+          if (updateError) {
+            console.error('Error updating inventory:', updateError);
+            continue;
+          }
+          
+          console.log(`Updated inventory for ${productType}_${item.size} to ${newStock}`);
+        } else {
+          console.warn(`Product inventory record not found: ${productType}_${item.size}`);
+        }
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error('Failed to update inventory:', error);
+    return false;
+  }
+};

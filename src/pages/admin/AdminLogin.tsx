@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +26,7 @@ const AdminLogin = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [usePasswordLogin, setUsePasswordLogin] = useState(true);
+  const [usePasswordLogin, setUsePasswordLogin] = useState(false); // Default to OTP
   const [isOtpMode, setIsOtpMode] = useState(false);
   const navigate = useNavigate();
   
@@ -75,7 +76,7 @@ const AdminLogin = () => {
     setError(null);
     
     try {
-      const isTargetEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      const isTargetEmail = email === 'b3fprintingsolutions@gmail.com';
       
       // For the specific admin email, use direct admin check first
       if (isTargetEmail) {
@@ -83,7 +84,7 @@ const AdminLogin = () => {
         const { data: adminCheck, error: adminCheckError } = await supabase
           .from('admin_users')
           .select('*')
-          .in('email', ['b3fprintingsolutions@gmai.com', 'b3fprintingsolutions@gmail.com'])
+          .eq('email', 'b3fprintingsolutions@gmail.com')
           .maybeSingle();
         
         if (adminCheckError) {
@@ -123,14 +124,13 @@ const AdminLogin = () => {
       }
       
       const userEmail = data.user.email || '';
-      const isB3FEmail = userEmail === 'b3fprintingsolutions@gmai.com' || 
-                          userEmail === 'b3fprintingsolutions@gmail.com';
+      const isB3FEmail = userEmail === 'b3fprintingsolutions@gmail.com';
       
-      // Check if this user is in admin_users table, checking both email variants for B3F
+      // Check if this user is in admin_users table
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${userEmail}`)
+        .eq('email', userEmail)
         .maybeSingle();
       
       if (adminError) {
@@ -160,7 +160,8 @@ const AdminLogin = () => {
             .insert({
               email: data.user.email,
               role: 'super_admin',
-              permissions: ['products.all', 'orders.all', 'users.all']
+              permissions: ['products.all', 'orders.all', 'users.all'],
+              user_id: data.user.id
             })
             .select()
             .single();
@@ -204,13 +205,13 @@ const AdminLogin = () => {
     setError(null);
     
     try {
-      const isB3FEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      const isB3FEmail = email === 'b3fprintingsolutions@gmail.com';
       
-      // Check if the email is in admin_users table (check both versions for B3F email)
+      // Check if the email is in admin_users table
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${email}`)
+        .eq('email', email)
         .maybeSingle();
       
       if (adminError) {
@@ -245,7 +246,7 @@ const AdminLogin = () => {
       
       // Log for development
       if (process.env.NODE_ENV === 'development') {
-        console.log(`Development mode: OTP sent to ${email}. Use code: 123456`);
+        console.log(`Development mode: OTP sent to ${email}. Check your email or Supabase logs.`);
       }
       
       toast.success('Verification code sent to your email');
@@ -263,44 +264,28 @@ const AdminLogin = () => {
     setError(null);
     
     try {
-      const isB3FEmail = email === 'b3fprintingsolutions@gmai.com' || email === 'b3fprintingsolutions@gmail.com';
+      const isB3FEmail = email === 'b3fprintingsolutions@gmail.com';
       
-      // In development mode, accept 123456 as a valid OTP
-      let verificationResult;
+      // Verify OTP
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email'
+      });
       
-      if (process.env.NODE_ENV === 'development' && otp === '123456') {
-        console.log('Development mode: Using test OTP');
-        // For development, we'll simulate a successful verification
-        // We'll sign in with a special method
-        verificationResult = await supabase.auth.signInWithPassword({
-          email,
-          password: 'development-mode-password', // This won't actually be used
-        });
-        
-        // Override the error property for development mode
-        if (verificationResult.error) {
-          // In dev mode, override the error and proceed with admin check
-          console.log('Development mode: Ignoring auth error and proceeding with admin check');
-          verificationResult.error = null;
-        }
-      } else {
-        // Normal verification flow
-        verificationResult = await supabase.auth.verifyOtp({
-          email,
-          token: otp,
-          type: 'email'
-        });
+      if (error) {
+        throw error;
       }
       
-      if (verificationResult.error) {
-        throw verificationResult.error;
+      if (!data.user) {
+        throw new Error('No user returned after verification');
       }
       
-      // Now check if this user is in admin_users table, checking both email variants for B3F
+      // Now check if this user is in admin_users table
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .or(isB3FEmail ? `email.eq.b3fprintingsolutions@gmai.com,email.eq.b3fprintingsolutions@gmail.com` : `email.eq.${email}`)
+        .eq('email', email)
         .maybeSingle();
       
       if (adminError) {
@@ -311,15 +296,15 @@ const AdminLogin = () => {
         // Cast to proper type
         const admin = adminData as AdminRecord;
         
-        // If the user exists in auth but didn't exist in admin, create/update the record
-        if (verificationResult.data?.user && isB3FEmail && !admin.user_id) {
+        // If the user exists in auth but didn't exist in admin, update the record
+        if (data.user && isB3FEmail && !admin.user_id) {
           await supabase
             .from('admin_users')
             .update({ 
-              user_id: verificationResult.data.user.id,
-              role: admin.role || 'admin',
-              permissions: admin.permissions || []
-            } as AdminRecord)
+              user_id: data.user.id,
+              role: admin.role || 'super_admin',
+              permissions: admin.permissions || ['products.all', 'orders.all', 'users.all']
+            })
             .eq('id', admin.id);
         }
         
@@ -328,18 +313,19 @@ const AdminLogin = () => {
         
         // Store admin role in localStorage
         localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || (verificationResult.data?.user?.id || admin.id));
+        localStorage.setItem('adminId', admin.user_id || (data.user?.id || admin.id));
         localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
         
         // Redirect to admin dashboard
         navigate('/admin/dashboard');
       } else {
         // For the B3F email, always create an admin record if missing
-        if (isB3FEmail && verificationResult.data?.user) {
+        if (isB3FEmail && data.user) {
           const { data: insertData, error: insertError } = await supabase
             .from('admin_users')
             .insert({
               email: email,
+              user_id: data.user.id,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all']
             })
@@ -355,7 +341,7 @@ const AdminLogin = () => {
             
             // Store admin role in localStorage
             localStorage.setItem('adminRole', 'super_admin');
-            localStorage.setItem('adminId', verificationResult.data.user.id);
+            localStorage.setItem('adminId', data.user.id);
             localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
             
             // Redirect to admin dashboard
@@ -364,9 +350,7 @@ const AdminLogin = () => {
           }
         } else {
           // User authenticated but is not an admin
-          if (verificationResult.data.user) {
-            await supabase.auth.signOut();
-          }
+          await supabase.auth.signOut();
           throw new Error('User is not authorized as admin');
         }
       }

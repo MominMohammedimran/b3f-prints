@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import RazorpayCheckout from '@/components/payment/RazorpayCheckout';
 import PaymentService from '@/services/paymentService';
-import { calculateEstimatedDelivery } from '@/utils/orderUtils';
+import { calculateEstimatedDelivery, updateInventoryLevels } from '@/utils/orderUtils';
 
 const Payment = () => {
   const { cartItems, clearCart, totalPrice } = useCart();
@@ -108,6 +108,9 @@ const Payment = () => {
       
       console.log('Order created:', result);
       
+      // Update inventory levels
+      await updateInventoryLevels(cartItems);
+      
       // Clear cart after successful order
       await clearCart();
       
@@ -117,8 +120,8 @@ const Payment = () => {
       // Show success message
       toast.success('Payment successful! Order placed.');
       
-      // Redirect to order confirmation page
-      navigate(`/order-complete/${result.orderId}`);
+      // Redirect to order tracking page instead of order complete
+      navigate(`/track-order/${result.orderId}`);
     } catch (error: any) {
       console.error('Error processing payment:', error);
       toast.error(error.message || 'Payment processing failed');

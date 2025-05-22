@@ -17,6 +17,7 @@ export type Database = {
           id: string
           is_default: boolean | null
           name: string
+          phone: string | null
           state: string
           street: string
           updated_at: string | null
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name: string
+          phone?: string | null
           state: string
           street: string
           updated_at?: string | null
@@ -43,6 +45,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name?: string
+          phone?: string | null
           state?: string
           street?: string
           updated_at?: string | null
@@ -56,19 +59,28 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          permissions: Json | null
+          role: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
           id?: string
+          permissions?: Json | null
+          role?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
+          permissions?: Json | null
+          role?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -196,6 +208,7 @@ export type Database = {
           id: string
           items: Json
           order_number: string
+          payment_details: Json | null
           payment_method: string
           shipping_address: Json | null
           status: string
@@ -211,6 +224,7 @@ export type Database = {
           id?: string
           items: Json
           order_number: string
+          payment_details?: Json | null
           payment_method?: string
           shipping_address?: Json | null
           status?: string
@@ -226,6 +240,7 @@ export type Database = {
           id?: string
           items?: Json
           order_number?: string
+          payment_details?: Json | null
           payment_method?: string
           shipping_address?: Json | null
           status?: string

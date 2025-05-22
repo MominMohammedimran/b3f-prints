@@ -1,79 +1,83 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 interface BoundaryBoxProps {
   productType: string;
-  className?: string;
-  children?: React.ReactNode;
+  view?: string;
 }
 
-const BoundaryBox: React.FC<BoundaryBoxProps> = ({ productType, className, children }) => {
-  const [dimensions, setDimensions] = useState({ 
-    width: '280px', 
-    height: '350px', 
-    top: '80px',
-    left: '50%',
-    transform: 'translateX(-50%)'
-  });
-  
-  // Update dimensions when product type changes
-  useEffect(() => {
-    switch(productType.toLowerCase()) {
+const BoundaryBox: React.FC<BoundaryBoxProps> = ({ productType, view = 'front' }) => {
+  // Return different boundary dimensions based on product type
+  const getBoundaryStyle = () => {
+    const commonStyles = "border-2 border-dashed border-blue-500 absolute z-10 pointer-events-none";
+    
+    switch (productType) {
       case 'tshirt':
-        setDimensions({ 
-          width: '280px', 
-          height: '350px', 
-          top: '80px',
-          left: '50%',
-          transform: 'translateX(-50%)'
-        });
+        if (view === 'front') {
+          return {
+            className: commonStyles,
+            style: {
+              left: '175px',
+              top: '120px',
+              width: '150px',
+              height: '200px'
+            }
+          };
+        } else if (view === 'back') {
+          return {
+            className: commonStyles,
+            style: {
+              left: '175px',
+              top: '120px',
+              width: '150px',
+              height: '200px'
+            }
+          };
+        }
         break;
-        
       case 'mug':
-        setDimensions({ 
-          width: '180px', 
-          height: '180px', 
-          top: '100px',
-          left: '50%',
-          transform: 'translateX(-50%)'
-        });
-        break;
-        
+        return {
+          className: commonStyles,
+          style: {
+            left: '150px',
+            top: '100px',
+            width: '100px',
+            height: '150px'
+          }
+        };
       case 'cap':
-        setDimensions({ 
-          width: '150px', 
-          height: '100px', 
-          top: '120px',
-          left: '50%',
-          transform: 'translateX(-50%)'
-        });
-        break;
-        
+        return {
+          className: commonStyles,
+          style: {
+            left: '150px',
+            top: '100px',
+            width: '120px',
+            height: '80px'
+          }
+        };
       default:
-        setDimensions({ 
-          width: '280px', 
-          height: '350px', 
-          top: '80px',
-          left: '50%',
-          transform: 'translateX(-50%)'
-        });
+        return {
+          className: commonStyles,
+          style: {
+            left: '175px',
+            top: '120px',
+            width: '150px',
+            height: '200px'
+          }
+        };
     }
-  }, [productType]);
-  
+  };
+
+  const boundaryStyle = getBoundaryStyle();
+
   return (
     <div 
-      className={`absolute border-2 border-dashed border-blue-500 ${className || ''}`}
-      style={{ 
-        width: dimensions.width,
-        height: dimensions.height,
-        top: dimensions.top,
-        left: dimensions.left,
-        transform: dimensions.transform,
-        zIndex: 10,
-        pointerEvents: 'none'
-      }}
+      className={boundaryStyle.className}
+      style={boundaryStyle.style}
     >
-      {children}
+      <div className="absolute -top-6 left-0 right-0 text-center text-xs text-blue-600 font-medium">
+        Design Area
+      </div>
     </div>
   );
 };

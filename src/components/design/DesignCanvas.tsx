@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { fabric } from 'fabric';
 import BoundaryBox from '../customization/BoundaryBox';
@@ -102,6 +103,88 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({
     return imageSrc;
   };
   
+  // Function to enforce objects stay within boundary
+  const enforceBoundary = (obj: fabric.Object) => {
+    if (!canvas) return;
+    
+    // Get boundary constraints based on product type
+    const boundaryConstraints = getBoundaryConstraints();
+    
+    // Calculate scaled object dimensions
+    const objWidth = obj.getScaledWidth();
+    const objHeight = obj.getScaledHeight();
+    
+    // Get object position
+    const objLeft = obj.left || 0;
+    const objTop = obj.top || 0;
+    
+    // Enforce horizontal constraints
+    if (objLeft < boundaryConstraints.left) {
+      obj.set('left', boundaryConstraints.left);
+    } else if (objLeft + objWidth > boundaryConstraints.left + boundaryConstraints.width) {
+      obj.set('left', boundaryConstraints.left + boundaryConstraints.width - objWidth);
+    }
+    
+    // Enforce vertical constraints
+    if (objTop < boundaryConstraints.top) {
+      obj.set('top', boundaryConstraints.top);
+    } else if (objTop + objHeight > boundaryConstraints.top + boundaryConstraints.height) {
+      obj.set('top', boundaryConstraints.top + boundaryConstraints.height - objHeight);
+    }
+    
+    obj.setCoords();
+    canvas.renderAll();
+  };
+  
+  // Get boundary constraints based on product type
+  const getBoundaryConstraints = () => {
+    // Default constraints for tshirt front
+    let constraints = {
+      left: 175,
+      top: 120,
+      width: 150,
+      height: 200
+    };
+    
+    switch (activeProduct) {
+      case 'tshirt':
+        if (productView === 'front') {
+          constraints = {
+            left: 175,
+            top: 120,
+            width: 150,
+            height: 200
+          };
+        } else if (productView === 'back') {
+          constraints = {
+            left: 175,
+            top: 120,
+            width: 150,
+            height: 200
+          };
+        }
+        break;
+      case 'mug':
+        constraints = {
+          left: 150,
+          top: 100,
+          width: 100,
+          height: 150
+        };
+        break;
+      case 'cap':
+        constraints = {
+          left: 150,
+          top: 100,
+          width: 120,
+          height: 80
+        };
+        break;
+    }
+    
+    return constraints;
+  };
+  
   // Set keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -120,6 +203,56 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({
     };
   }, [undoStack, redoStack, canvas]);
   
+  // Setup canvas event listeners to enforce boundary
+  useEffect(() => {
+    if (!canvas) return;
+    
+    const handleObjectMoving = (e: fabric.IEvent) => {
+      const obj = e.target;
+      if (obj) {
+        enforceBoundary(obj);
+      }
+    };
+    
+    const handleObjectScaling = (e: fabric.IEvent) => {
+      const obj = e.target;
+      if (obj) {
+        enforceBoundary(obj);
+      }
+    };
+    
+    const handleObjectModified = (e: fabric.IEvent) => {
+      // Save state for undo/redo after an object is modified
+      if (canvas) {
+        const jsonState = JSON.stringify(canvas.toJSON());
+        setUndoStack([...undoStack, jsonState]);
+        setRedoStack([]);
+        
+        // Update design image
+        setDesignImage(canvas.toDataURL({ format: 'png' }));
+        
+        // Check and update design completion status
+        const isComplete = checkDesignStatus(canvas);
+        setDesignComplete({
+          ...designComplete,
+          [activeProduct + '-' + productView]: isComplete
+        });
+      }
+    };
+    
+    // Add event listeners
+    canvas.on('object:moving', handleObjectMoving);
+    canvas.on('object:scaling', handleObjectScaling);
+    canvas.on('object:modified', handleObjectModified);
+    
+    return () => {
+      // Remove event listeners on cleanup
+      canvas.off('object:moving', handleObjectMoving);
+      canvas.off('object:scaling', handleObjectScaling);
+      canvas.off('object:modified', handleObjectModified);
+    };
+  }, [canvas, activeProduct, productView, undoStack, redoStack]);
+  
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 relative mb-6">
       <div className="relative flex justify-center overflow-hidden">
@@ -131,7 +264,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({
         />
         
         {/* Design boundary box */}
-        <BoundaryBox productType={activeProduct} />
+        <BoundaryBox productType={activeProduct} view={productView} />
         
         {/* Canvas for designing */}
         <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center z-0">
