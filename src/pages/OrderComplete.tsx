@@ -13,7 +13,7 @@ const OrderComplete = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 mt-10">
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
           </div>
@@ -25,7 +25,7 @@ const OrderComplete = () => {
   if (error || !orderData) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 mt-10">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
             <p>{error || 'Order not found'}</p>
@@ -44,7 +44,7 @@ const OrderComplete = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 mt-10">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">

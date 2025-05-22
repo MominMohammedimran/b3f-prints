@@ -17,7 +17,7 @@ const TrackOrder = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh] mt-10">
           <OrderLoadingState />
         </div>
       </Layout>
@@ -27,7 +27,7 @@ const TrackOrder = () => {
   if (error || !tracking) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 mt-10">
           <OrderErrorState error={error?.message || 'Error loading tracking information'} />
         </div>
       </Layout>
@@ -36,7 +36,7 @@ const TrackOrder = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 mt-10">
         <div className="flex items-center mb-6">
           <Link to="/orders" className="flex items-center text-blue-600 hover:text-blue-800">
             <ArrowLeft className="mr-2 h-4 w-4" />

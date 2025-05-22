@@ -23,7 +23,7 @@ const SignUp = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto max-w-md px-4 pb-24">
+      <div className="container mx-auto max-w-md px-4 pb-24 mt-10">
         <div className="bg-white rounded-lg shadow-sm p-6 mt-8">
           <h1 className="text-2xl font-bold text-center mb-6 bg-blue-600 text-white py-2 rounded">
             Sign Up

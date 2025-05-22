@@ -343,7 +343,7 @@ const Checkout = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 mt-10">
         <div className="flex items-center mb-6">
           <Link to="/cart" className="mr-2">
             <ArrowLeft size={24} className="text-blue-600 hover:text-blue-800" />

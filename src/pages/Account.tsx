@@ -59,7 +59,7 @@ const Account = () => {
   if (!currentUser) {
     return (
       <Layout>
-        <div className="container-custom">
+        <div className="container-custom mt-10">
         
           <h1 className="text-3xl font-bold mb-8 text-center">My Account</h1>
           
@@ -91,12 +91,12 @@ const Account = () => {
 
   return (
     <Layout>
-      <div className="container-custom pt-6">
+      <div className="container-custom pt-6 mt-10">
            <div className="flex items-center  mt-4 animate-fade-in">
-                    <Link to="/profile" className="mr-2">
-                      <ArrowLeft size={24} className="back-arrow" />
+                    <Link to="/profile" className="mr-4">
+                      <ArrowLeft size={30} className="back-arrow" />
                     </Link>
-                    <h1 className="text-2xl font-bold">Back</h1>
+                    <h1 className="text-3xl font-bold">Back</h1>
                   </div>
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 sm:p-8">
@@ -116,9 +116,9 @@ const Account = () => {
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-2 md:grid-cols-2 w-full mb-8">
-                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="profile"className='text-xl'>Profile</TabsTrigger>
                
-                <TabsTrigger value="addresses">Addresses</TabsTrigger>
+                <TabsTrigger value="addresses" className='text-xl'>Addresses</TabsTrigger>
                 </TabsList>
               <TabsContent value="profile">
                 <ProfileSettings />

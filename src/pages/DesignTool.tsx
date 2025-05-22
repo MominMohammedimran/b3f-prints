@@ -327,14 +327,14 @@ const DesignTool = () => {
 
   return (
     <Layout>
-      <div className="container-custom px-4">
-        <div className="flex items-center justify-between mb-6">
+      <div className="container-custom px-4 mt-10">
+        <div className="flex items-center justify-between   mb-6">
           <Link
             to="/"
             className="flex items-center text-blue-600 hover:text-blue-800"
           >
-            <ArrowLeft className="mr-1" size={20} />
-            <span className="text-sm font-medium">Back</span>
+            <ArrowLeft className="mr-1" size={25} />
+            <span className="text-xl font-medium">Back</span>
           </Link>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800">Design Your Product</h1>
           <div className="w-20"></div>
