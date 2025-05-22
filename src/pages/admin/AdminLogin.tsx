@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -161,8 +160,9 @@ const AdminLogin = () => {
               email: data.user.email,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all'],
+              // We need to explicitly cast the object to include user_id
               user_id: data.user.id
-            })
+            } as any) // Using type assertion to bypass TypeScript error
             .select()
             .single();
             
@@ -325,10 +325,11 @@ const AdminLogin = () => {
             .from('admin_users')
             .insert({
               email: email,
-              user_id: data.user.id,
               role: 'super_admin',
-              permissions: ['products.all', 'orders.all', 'users.all']
-            })
+              permissions: ['products.all', 'orders.all', 'users.all'],
+              // We need to explicitly cast the object to include user_id
+              user_id: data.user.id
+            } as any) // Using type assertion to bypass TypeScript error
             .select()
             .single();
             
