@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // These were missing in the original code
@@ -26,11 +25,11 @@ export const isAdminAuthenticated = async (): Promise<boolean> => {
       return false;
     }
     
-    // Use direct query without self-referencing the admin_users table
-    // This prevents infinite recursion in RLS policies
+    // Use direct query to avoid RLS infinite recursion
+    // Instead of selecting *, select only needed fields to prevent recursion
     const { data: adminData, error } = await supabase
       .from('admin_users')
-      .select('*')
+      .select('id, email')
       .eq('email', session.user.email)
       .maybeSingle();
       

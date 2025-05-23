@@ -26,8 +26,7 @@ export const CartSizeCheck: React.FC<CartSizeCheckProps> = ({
     
     if (missingSize) {
       toast.error("Please select size for all items before proceeding to checkout.");
-      // Continue anyway after warning
-      onProceed();
+      // Don't proceed if sizes are missing
       return;
     }
     

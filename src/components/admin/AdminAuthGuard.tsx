@@ -31,8 +31,12 @@ const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({ children }) => {
         
         console.log('Checking admin status for user:', currentUser.email);
         
-        // Check if user is an admin in database
-        const isAdmin = await isAdminAuthenticated();
+        // Direct database check to avoid RLS issues
+        const { data } = await supabase.rpc('is_admin', {
+          user_email: currentUser.email
+        });
+        
+        const isAdmin = !!data;
         
         // If not admin, redirect to login
         if (!isAdmin) {
