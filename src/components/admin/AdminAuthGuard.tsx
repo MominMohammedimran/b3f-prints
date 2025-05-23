@@ -11,6 +11,11 @@ interface AdminAuthGuardProps {
   children: React.ReactNode;
 }
 
+// Define the type for the is_admin function parameter
+interface IsAdminParams {
+  user_email: string;
+}
+
 const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({ children }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -32,9 +37,9 @@ const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({ children }) => {
         console.log('Checking admin status for user:', currentUser.email);
         
         // Direct database check to avoid RLS issues
-        const { data, error } = await supabase.rpc('is_admin', {
+        const { data, error } = await supabase.rpc<boolean>('is_admin', {
           user_email: currentUser.email || ''
-        } as { user_email: string });
+        } as IsAdminParams);
         
         if (error) {
           console.error('Error checking admin status:', error);
