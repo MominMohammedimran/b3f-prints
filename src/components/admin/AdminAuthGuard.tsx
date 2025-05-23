@@ -37,10 +37,9 @@ const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({ children }) => {
         console.log('Checking admin status for user:', currentUser.email);
         
         // Direct database check to avoid RLS issues
-        // Fix: Call rpc without explicit type parameters, and cast the parameters object
-        const { data, error } = await supabase.rpc('is_admin', {
-          user_email: currentUser.email || ''
-        } as IsAdminParams);
+        // Use a properly typed call to the RPC function
+        const { data, error } = await supabase
+          .rpc('is_admin', { user_email: currentUser.email || '' });
         
         if (error) {
           console.error('Error checking admin status:', error);
