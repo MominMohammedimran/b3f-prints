@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { fabric } from 'fabric';
 import { useColor } from '@/context/ColorContext';
@@ -7,14 +8,37 @@ import { useText } from '@/context/TextContext';
 import { useEmoji } from '@/context/EmojiContext';
 import BoundaryRestrictor from './BoundaryRestrictor';
 
-const DesignCanvas = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+interface DesignCanvasProps {
+  activeProduct?: string;
+  productView?: string;
+  canvas?: fabric.Canvas | null;
+  setCanvas?: React.Dispatch<React.SetStateAction<fabric.Canvas | null>>;
+  undoStack?: string[];
+  redoStack?: string[];
+  setUndoStack?: React.Dispatch<React.SetStateAction<string[]>>;
+  setRedoStack?: React.Dispatch<React.SetStateAction<string[]>>;
+  setDesignImage?: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setCanvasInitialized?: React.Dispatch<React.SetStateAction<boolean>>;
+  canvasRef?: React.RefObject<HTMLCanvasElement>;
+  fabricCanvasRef?: React.MutableRefObject<fabric.Canvas | null>;
+  setDesignComplete?: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  designComplete?: Record<string, boolean>;
+  checkDesignStatus?: (canvasInstance?: fabric.Canvas | null) => boolean;
+}
+
+const DesignCanvas: React.FC<DesignCanvasProps> = (props) => {
+  const localCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [localCanvas, setLocalCanvas] = useState<fabric.Canvas | null>(null);
   const { selectedColor } = useColor();
   const { selectedFont } = useFont();
   const { selectedImage } = useImage();
   const { text, setText } = useText();
   const { selectedEmoji } = useEmoji();
+  
+  // Use provided refs or local refs if not provided
+  const canvasRef = props.canvasRef || localCanvasRef;
+  const canvas = props.canvas || localCanvas;
+  const setCanvas = props.setCanvas || setLocalCanvas;
 
   useEffect(() => {
     const initializeCanvas = () => {
@@ -28,6 +52,9 @@ const DesignCanvas = () => {
       });
 
       setCanvas(newCanvas);
+      if (props.setCanvasInitialized) {
+        props.setCanvasInitialized(true);
+      }
     };
 
     initializeCanvas();
@@ -60,6 +87,16 @@ const DesignCanvas = () => {
       canvas.setActiveObject(textbox);
       canvas.renderAll();
       setText('');
+      
+      // Save canvas state if callback provided
+      if (props.setUndoStack && props.undoStack) {
+        props.setUndoStack([...props.undoStack, JSON.stringify(canvas.toJSON())]);
+      }
+      
+      // Update design status if callback provided
+      if (props.checkDesignStatus) {
+        props.checkDesignStatus(canvas);
+      }
     };
 
     addTextToCanvas();
@@ -84,6 +121,16 @@ const DesignCanvas = () => {
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
+        
+        // Save canvas state if callback provided
+        if (props.setUndoStack && props.undoStack) {
+          props.setUndoStack([...props.undoStack, JSON.stringify(canvas.toJSON())]);
+        }
+        
+        // Update design status if callback provided
+        if (props.checkDesignStatus) {
+          props.checkDesignStatus(canvas);
+        }
       });
     };
 
@@ -109,6 +156,16 @@ const DesignCanvas = () => {
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
+        
+        // Save canvas state if callback provided
+        if (props.setUndoStack && props.undoStack) {
+          props.setUndoStack([...props.undoStack, JSON.stringify(canvas.toJSON())]);
+        }
+        
+        // Update design status if callback provided
+        if (props.checkDesignStatus) {
+          props.checkDesignStatus(canvas);
+        }
       });
     };
 
@@ -133,7 +190,7 @@ const DesignCanvas = () => {
           zIndex: 10
         }}
       />
-      <BoundaryRestrictor canvas={canvasRef.current} boundaryId="design-boundary" />
+      <BoundaryRestrictor canvas={canvas} boundaryId="design-boundary" />
     </div>
   );
 };
