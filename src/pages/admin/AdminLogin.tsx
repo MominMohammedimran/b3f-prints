@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,7 +100,7 @@ const AdminLogin = () => {
               email: email,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all']
-            } as any);
+            } as AdminRecord);
             
           if (insertError) {
             console.error('Error creating admin account:', insertError);
@@ -161,9 +160,8 @@ const AdminLogin = () => {
               email: data.user.email,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all'],
-              // We need to explicitly cast the object to include user_id
               user_id: data.user.id
-            } as any) // Using type assertion to bypass TypeScript error
+            } as AdminRecord)
             .select()
             .single();
             
@@ -227,7 +225,7 @@ const AdminLogin = () => {
             email: email,
             role: 'super_admin',
             permissions: ['products.all', 'orders.all', 'users.all']
-          } as any);
+          } as AdminRecord);
           
         if (createError) {
           console.error('Error creating admin account:', createError);
@@ -305,7 +303,7 @@ const AdminLogin = () => {
               user_id: data.user.id,
               role: admin.role || 'super_admin',
               permissions: admin.permissions || ['products.all', 'orders.all', 'users.all']
-            } as any)
+            } as AdminRecord)
             .eq('id', admin.id);
         }
         
@@ -328,9 +326,8 @@ const AdminLogin = () => {
               email: email,
               role: 'super_admin',
               permissions: ['products.all', 'orders.all', 'users.all'],
-              // We need to explicitly cast the object to include user_id
               user_id: data.user.id
-            } as any) // Using type assertion to bypass TypeScript error
+            } as AdminRecord)
             .select()
             .single();
             

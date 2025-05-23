@@ -81,14 +81,14 @@ export class PaymentService {
       
       // Normalize shipping address to ensure consistent property names
       const normalizedAddress = {
-        name: shippingAddress.fullName || `${shippingAddress.firstName || ''} ${shippingAddress.lastName || ''}`.trim() || shippingAddress.name,
+        name: shippingAddress.fullName || `${shippingAddress.firstName || ''} ${shippingAddress.lastName || ''}`.trim() || shippingAddress.name || '',
         street: shippingAddress.addressLine1 || shippingAddress.street || '',
         city: shippingAddress.city || '',
         state: shippingAddress.state || '',
         zipcode: shippingAddress.zipCode || shippingAddress.postalCode || shippingAddress.zipcode || '',
         country: shippingAddress.country || 'India',
         phone: shippingAddress.phone || '',
-        email: shippingAddress.email || userEmail
+        email: shippingAddress.email || userEmail || ''
       };
       
       // Create the basic payment details object
@@ -101,31 +101,38 @@ export class PaymentService {
       console.log('Creating order with payment details:', paymentDetails);
       console.log('Shipping address:', normalizedAddress);
       
-      // Create the order in the database
-      const { data, error } = await this.supabase
-        .from('orders')
-        .insert({
-          user_id: userId,
-          user_email: userEmail,
-          order_number: orderNumber,
-          total: totalAmount,
-          status: 'order_placed',
-          payment_method: paymentMethod,
-          shipping_address: normalizedAddress,
-          delivery_fee: deliveryFee,
-          items: serializedItems,
-          payment_details: paymentDetails,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error creating order:', error);
-        throw error;
+      // Create the order in the database with error handling
+      try {
+        const { data, error } = await this.supabase
+          .from('orders')
+          .insert({
+            user_id: userId,
+            user_email: userEmail || '',
+            order_number: orderNumber,
+            total: totalAmount,
+            status: 'order_placed',
+            payment_method: paymentMethod,
+            shipping_address: normalizedAddress,
+            delivery_fee: deliveryFee,
+            items: serializedItems,
+            payment_details: paymentDetails,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Supabase error creating order:', error);
+          throw error;
+        }
+        
+        console.log('Order created successfully:', data);
+        return data;
+      } catch (insertError) {
+        console.error('Error during order insert:', insertError);
+        throw new Error('Failed to insert order into database');
       }
-      return data;
     } catch (error) {
       console.error('Error creating order:', error);
       throw error;
@@ -191,6 +198,7 @@ export class PaymentService {
       console.log('Processing payment with method:', paymentMethod);
       
       if (!userId || !userEmail) {
+        console.error('Missing user info:', { userId, userEmail });
         return {
           success: false,
           error: 'User information is missing'
@@ -198,9 +206,22 @@ export class PaymentService {
       }
       
       if (!cartItems || cartItems.length === 0) {
+        console.error('No items in cart');
         return {
           success: false, 
           error: 'No items in cart'
+        };
+      }
+      
+      // Log shippingAddress for debugging
+      console.log('Shipping address received:', shippingAddress);
+      
+      // Validate address fields
+      if (!shippingAddress.city || !shippingAddress.state || !shippingAddress.country) {
+        console.error('Incomplete shipping address:', shippingAddress);
+        return {
+          success: false,
+          error: 'Shipping address is incomplete'
         };
       }
       
@@ -232,6 +253,7 @@ export class PaymentService {
       }
       
       if (!orderData) {
+        console.error('No order data returned');
         return {
           success: false,
           error: 'Failed to create order'
@@ -256,6 +278,7 @@ export class PaymentService {
         // Continue even if tracking creation fails
       }
       
+      console.log('Order processed successfully:', orderData.id);
       return {
         success: true,
         orderId: orderData.id,

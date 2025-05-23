@@ -26,7 +26,8 @@ export const isAdminAuthenticated = async (): Promise<boolean> => {
       return false;
     }
     
-    // Check if user is in admin_users table
+    // Use direct query without self-referencing the admin_users table
+    // This prevents infinite recursion in RLS policies
     const { data: adminData, error } = await supabase
       .from('admin_users')
       .select('*')
