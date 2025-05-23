@@ -4,17 +4,15 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 interface FontContextType {
   selectedFont: string;
   setSelectedFont: (font: string) => void;
-  availableFonts: string[];
 }
 
 const FontContext = createContext<FontContextType | undefined>(undefined);
 
 export const FontProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedFont, setSelectedFont] = useState<string>('Arial');
-  const availableFonts = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Impact'];
 
   return (
-    <FontContext.Provider value={{ selectedFont, setSelectedFont, availableFonts }}>
+    <FontContext.Provider value={{ selectedFont, setSelectedFont }}>
       {children}
     </FontContext.Provider>
   );
