@@ -98,7 +98,6 @@ const DesignPreviewCard: React.FC<DesignPreviewCardProps> = ({
         const link = document.createElement('a');
         link.href = previewImage;
         link.download = `${orderNumber}-${productName}-preview.png`;
-        link.crossOrigin = 'anonymous';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

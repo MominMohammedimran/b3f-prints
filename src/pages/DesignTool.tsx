@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -198,11 +199,10 @@ const DesignTool = () => {
 
       tempFabricCanvas.renderAll();
 
-      // Generate data URL
+      // Generate data URL without backgroundColor in options
       const previewDataUrl = tempFabricCanvas.toDataURL({
         format: 'png',
-        quality: 1,
-        backgroundColor: 'transparent'
+        quality: 1
       });
 
       // Clean up
