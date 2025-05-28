@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -194,12 +193,13 @@ const DesignTool = () => {
 
       // Add only design objects to temp canvas
       designObjects.forEach(obj => {
-        tempFabricCanvas.add(obj);
+        const clonedObj = fabric.util.object.clone(obj);
+        tempFabricCanvas.add(clonedObj);
       });
 
       tempFabricCanvas.renderAll();
 
-      // Generate data URL without backgroundColor in options
+      // Generate data URL
       const previewDataUrl = tempFabricCanvas.toDataURL({
         format: 'png',
         quality: 1

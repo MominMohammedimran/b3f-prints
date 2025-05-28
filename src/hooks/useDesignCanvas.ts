@@ -141,7 +141,9 @@ export const useDesignCanvas = ({ activeProduct, productView, isDualSided }: Use
         imgSrc = '/lovable-uploads/design-tool-page/cap-print.png';
       }
       
-      // Load image with proper error handling
+      console.log('Loading background image:', imgSrc);
+      
+      // Load image with proper error handling and fitting
       fabric.Image.fromURL(imgSrc, (fabricImg) => {
         if (!fabricImg) {
           console.error('Failed to load image:', imgSrc);
@@ -149,15 +151,16 @@ export const useDesignCanvas = ({ activeProduct, productView, isDualSided }: Use
           return;
         }
 
-        // Scale the image to fit the canvas properly
+        // Fit the image to canvas properly
         const canvasWidth = canvas.getWidth();
         const canvasHeight = canvas.getHeight();
         const imgWidth = fabricImg.width!;
         const imgHeight = fabricImg.height!;
         
+        // Calculate scale to fit image to canvas
         const scaleX = canvasWidth / imgWidth;
         const scaleY = canvasHeight / imgHeight;
-        const scale = Math.min(scaleX, scaleY) * 0.8; // 80% to leave design space
+        const scale = Math.min(scaleX, scaleY);
         
         fabricImg.set({
           left: canvasWidth / 2,
@@ -194,7 +197,15 @@ export const useDesignCanvas = ({ activeProduct, productView, isDualSided }: Use
         canvas.renderAll();
         updateDesignImage(canvas);
         checkDesignStatus(canvas);
-      }, { crossOrigin: 'anonymous' });
+        console.log('Background image loaded successfully');
+      }, { 
+        crossOrigin: 'anonymous',
+        // Add error handling for failed image loads
+        onError: () => {
+          console.error('Failed to load background image:', imgSrc);
+          canvas.setBackgroundColor('#f0f0f0', canvas.renderAll.bind(canvas));
+        }
+      });
       
     } catch (error) {
       console.error('Error adding background image:', error);
@@ -207,24 +218,41 @@ export const useDesignCanvas = ({ activeProduct, productView, isDualSided }: Use
     if (!canvasToUse) return;
     
     try {
-      // Generate preview with only design elements (excluding background)
-      const originalBg = canvasToUse.backgroundColor;
-      const backgroundObjects = canvasToUse.getObjects().filter(obj => obj.data?.isBackground);
+      // Get only design objects (exclude background)
+      const designObjects = canvasToUse.getObjects().filter(obj => !obj.data?.isBackground);
       
-      // Temporarily hide background for clean preview
-      backgroundObjects.forEach(obj => obj.set('visible', false));
-      canvasToUse.setBackgroundColor('transparent', () => {});
+      if (designObjects.length === 0) {
+        setDesignImage(undefined);
+        return;
+      }
+
+      // Create a temporary canvas for preview generation
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasToUse.width!;
+      tempCanvas.height = canvasToUse.height!;
       
-      const dataUrl = canvasToUse.toDataURL({
-        format: 'png',
-        quality: 1,
+      const tempFabricCanvas = new fabric.Canvas(tempCanvas, {
+        width: canvasToUse.width!,
+        height: canvasToUse.height!,
         backgroundColor: 'transparent'
       });
-      
-      // Restore background
-      backgroundObjects.forEach(obj => obj.set('visible', true));
-      canvasToUse.setBackgroundColor(originalBg, () => {});
-      canvasToUse.renderAll();
+
+      // Add only design objects to temp canvas
+      designObjects.forEach(obj => {
+        const clonedObj = fabric.util.object.clone(obj);
+        tempFabricCanvas.add(clonedObj);
+      });
+
+      tempFabricCanvas.renderAll();
+
+      // Generate preview data URL
+      const dataUrl = tempFabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1
+      });
+
+      // Clean up
+      tempFabricCanvas.dispose();
       
       setDesignImage(dataUrl);
     } catch (error) {

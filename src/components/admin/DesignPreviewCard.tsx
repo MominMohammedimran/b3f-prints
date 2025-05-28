@@ -35,7 +35,7 @@ const DesignPreviewCard: React.FC<DesignPreviewCardProps> = ({
         const tempCanvas = new fabric.Canvas(tempCanvasElement, {
           width: designData.width || 500,
           height: designData.height || 600,
-          backgroundColor: designData.backgroundColor || '#ffffff'
+          backgroundColor: 'transparent'
         });
 
         // Load the design data into the temporary canvas
@@ -45,15 +45,20 @@ const DesignPreviewCard: React.FC<DesignPreviewCardProps> = ({
           
           if (designObjects.length > 0) {
             // Create a new canvas with only design elements
-            const exportCanvas = new fabric.Canvas(document.createElement('canvas'), {
-              width: tempCanvas.width,
-              height: tempCanvas.height,
+            const exportCanvasElement = document.createElement('canvas');
+            exportCanvasElement.width = tempCanvas.width!;
+            exportCanvasElement.height = tempCanvas.height!;
+            
+            const exportCanvas = new fabric.Canvas(exportCanvasElement, {
+              width: tempCanvas.width!,
+              height: tempCanvas.height!,
               backgroundColor: 'transparent'
             });
 
             // Add only design objects
             designObjects.forEach(obj => {
-              exportCanvas.add(obj);
+              const clonedObj = fabric.util.object.clone(obj);
+              exportCanvas.add(clonedObj);
             });
 
             exportCanvas.renderAll();
