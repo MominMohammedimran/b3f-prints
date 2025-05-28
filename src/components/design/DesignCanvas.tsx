@@ -7,6 +7,7 @@ import { useImage } from '@/context/ImageContext';
 import { useText } from '@/context/TextContext';
 import { useEmoji } from '@/context/EmojiContext';
 import BoundaryRestrictor from './BoundaryRestrictor';
+import CanvasControls from './CanvasControls';
 
 interface DesignCanvasProps {
   activeProduct?: string;
@@ -24,6 +25,9 @@ interface DesignCanvasProps {
   setDesignComplete?: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   designComplete?: Record<string, boolean>;
   checkDesignStatus?: (canvasInstance?: fabric.Canvas | null) => boolean;
+  undo?: () => void;
+  redo?: () => void;
+  clearCanvas?: () => void;
 }
 
 const DesignCanvas: React.FC<DesignCanvasProps> = (props) => {
@@ -39,12 +43,14 @@ const DesignCanvas: React.FC<DesignCanvasProps> = (props) => {
   const canvasRef = props.canvasRef || localCanvasRef;
   const canvas = props.canvas || localCanvas;
   const setCanvas = props.setCanvas || setLocalCanvas;
+  const undoStack = props.undoStack || [];
+  const redoStack = props.redoStack || [];
 
   useEffect(() => {
     const initializeCanvas = () => {
       const newCanvas = new fabric.Canvas('design-canvas', {
         backgroundColor: '#fff',
-        height: 500,
+        height: 600,
         width: 500,
         preserveObjectStacking: true,
         selection: true,
@@ -172,25 +178,52 @@ const DesignCanvas: React.FC<DesignCanvasProps> = (props) => {
     addEmojiToCanvas(selectedEmoji);
   }, [selectedEmoji, canvas]);
 
+  const handleUndo = () => {
+    if (props.undo) {
+      props.undo();
+    }
+  };
+
+  const handleRedo = () => {
+    if (props.redo) {
+      props.redo();
+    }
+  };
+
+  const handleClear = () => {
+    if (props.clearCanvas) {
+      props.clearCanvas();
+    }
+  };
+
   return (
-    <div className="design-canvas-container relative">
-      <canvas
-        id="design-canvas"
-        ref={canvasRef}
-        className="border border-gray-300"
+    <div className="design-canvas-container">
+      <CanvasControls
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onClear={handleClear}
+        canUndo={undoStack.length > 1}
+        canRedo={redoStack.length > 0}
       />
-      <div 
-        id="design-boundary" 
-        className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
-        style={{
-          top: '10%',
-          left: '10%',
-          width: '80%',
-          height: '80%',
-          zIndex: 10
-        }}
-      />
-      <BoundaryRestrictor canvas={canvas} boundaryId="design-boundary" />
+      <div className="relative">
+        <canvas
+          id="design-canvas"
+          ref={canvasRef}
+          className="border border-gray-300 rounded-lg shadow-lg"
+        />
+        <div 
+          id="design-boundary" 
+          className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
+          style={{
+            top: '10%',
+            left: '10%',
+            width: '80%',
+            height: '80%',
+            zIndex: 10
+          }}
+        />
+        <BoundaryRestrictor canvas={canvas} boundaryId="design-boundary" />
+      </div>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -184,6 +183,51 @@ export interface Database {
         }
         Relationships: []
       }
+      order_tracking: {
+  Row: {
+    id: string;
+    order_id: string;
+    status: string;
+    current_location: string | null;
+    estimated_delivery: string | null;
+    tracking_number: string | null;
+    timestamp: string;
+    description: string | null;
+    // If you have a history JSON column, adjust type as needed, e.g.:
+    history?: Json | null;
+  };
+  Insert: {
+    id?: string;
+    order_id: string;
+    status: string;
+    current_location?: string | null;
+    estimated_delivery?: string | null;
+    tracking_number?: string | null;
+    timestamp?: string;
+    description?: string | null;
+    history?: Json | null;
+  };
+  Update: {
+    id?: string;
+    order_id?: string;
+    status?: string;
+    current_location?: string | null;
+    estimated_delivery?: string | null;
+    tracking_number?: string | null;
+    timestamp?: string;
+    description?: string | null;
+    history?: Json | null;
+  };
+  Relationships: [
+    {
+      foreignKeyName: "order_tracking_order_id_fkey",
+      columns: ["order_id"],
+      referencedRelation: "orders",
+      referencedColumns: ["id"];
+    }
+  ];
+};
+
       products: {
         Row: {
           id: string
@@ -349,10 +393,19 @@ export interface Database {
         }
         Relationships: []
       }
-    }
-    Views: {}
-    Functions: {}
-    Enums: {}
-    CompositeTypes: {}
-  }
+    };
+    Views: {};
+    Functions: {
+            is_admin: {
+            Args: {
+              user_email: string;
+             };
+               Returns: boolean;
+          };
+  // other functions...
+};
+
+    Enums: {};
+    CompositeTypes: {};
+  };
 }

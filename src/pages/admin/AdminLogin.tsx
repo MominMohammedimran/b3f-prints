@@ -1,396 +1,190 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from '@/integrations/supabase/client';
-import AdminLoginForm from '@/components/admin/AdminLoginForm';
+import { toast } from '@/utils/toastWrapper';
 import AdminOTPForm from '@/components/admin/AdminOTPForm';
-import { User } from '@supabase/supabase-js';
-import { ensureMainAdminExists, DEFAULT_ADMIN_PERMISSIONS } from '@/utils/adminAuth';
-
-// Define proper interface for admin records with all required fields
-interface AdminRecord {
-  id: string;
-  email: string;
-  created_at?: string;
-  updated_at?: string;
-  role?: string;
-  user_id?: string;
-  permissions?: string[];
-}
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [usePasswordLogin, setUsePasswordLogin] = useState(false); // Default to OTP
-  const [isOtpMode, setIsOtpMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const navigate = useNavigate();
-  
-  // Check if user is already logged in as admin
-  useEffect(() => {
-    checkAdminStatus();
-    
-    // Try to ensure our main admin exists
-    ensureMainAdminExists().catch(err => 
-      console.error('Failed to ensure main admin exists:', err)
-    );
-  }, []);
 
-  const checkAdminStatus = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        console.info('Checking admin status for', session.user.email);
-        
-        // Check if user is in admin_users table
-        const { data: adminData, error: adminError } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('email', session.user.email)
-          .maybeSingle();
-          
-        if (adminError) {
-          console.error('Error fetching admin data:', adminError);
-          return;
-        }
-        
-        if (adminData) {
-          // User is an admin, redirect to admin dashboard
-          setUser(session.user);
+  // Check if already authenticated
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // Check if this user is an admin
+        const { data: adminCheck } = await supabase.rpc('is_admin', {
+          user_email: data.session.user.email
+        });
+
+        if (adminCheck) {
           navigate('/admin/dashboard');
         }
       }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-    }
-  };
+    };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const isTargetEmail = email === 'b3fprintingsolutions@gmail.com';
-      
-      // For the specific admin email, use direct admin check first
-      if (isTargetEmail) {
-        // Check if email exists in admin_users table regardless of auth
-        const { data: adminCheck, error: adminCheckError } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('email', 'b3fprintingsolutions@gmail.com')
-          .maybeSingle();
-        
-        if (adminCheckError) {
-          console.error('Error checking admin status:', adminCheckError);
-        }
-        
-        // If admin doesn't exist in table, create it
-        if (!adminCheck) {
-          console.log('Creating admin account for', email);
-          // Insert admin record if it doesn't exist
-          const { error: insertError } = await supabase
-            .from('admin_users')
-            .insert({
-              email: email,
-              role: 'super_admin',
-              permissions: ['products.all', 'orders.all', 'users.all']
-            } as AdminRecord);
-            
-          if (insertError) {
-            console.error('Error creating admin account:', insertError);
-          }
-        }
-      }
-      
-      // Sign in with email/password
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (signInError) {
-        throw signInError;
-      }
-      
-      if (!data.user) {
-        throw new Error('No user returned after login');
-      }
-      
-      const userEmail = data.user.email || '';
-      const isB3FEmail = userEmail === 'b3fprintingsolutions@gmail.com';
-      
-      // Check if this user is in admin_users table
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', userEmail)
-        .maybeSingle();
-      
-      if (adminError) {
-        console.error('Error verifying admin status:', adminError);
-        throw new Error('Error verifying admin status: ' + adminError.message);
-      }
-      
-      if (adminData) {
-        // Cast to proper type
-        const admin = adminData as AdminRecord;
-        
-        // Store admin role in localStorage
-        localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.id);
-        localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || DEFAULT_ADMIN_PERMISSIONS));
-        
-        // Successfully authenticated as admin
-        toast.success('Login successful!');
-        
-        // Redirect to admin dashboard
-        navigate('/admin/dashboard');
-      } else {
-        // If user authenticated but not in admin table, add them for our designated admin
-        if (isB3FEmail) {
-          const { data: insertData, error: insertError } = await supabase
-            .from('admin_users')
-            .insert({
-              email: data.user.email,
-              role: 'super_admin',
-              permissions: ['products.all', 'orders.all', 'users.all'],
-              user_id: data.user.id
-            } as AdminRecord)
-            .select()
-            .single();
-            
-          if (insertError) {
-            throw new Error('Error creating admin account: ' + insertError.message);
-          }
-          
-          if (insertData) {
-            toast.success('Admin account created and login successful!');
-            
-            // Store admin role in localStorage
-            localStorage.setItem('adminRole', 'super_admin');
-            localStorage.setItem('adminId', data.user.id);
-            localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
-            
-            // Redirect to admin dashboard
-            navigate('/admin/dashboard');
-            return;
-          }
-        }
-        
-        // User exists but is not an admin
-        await supabase.auth.signOut();
-        throw new Error('User is not authorized as admin');
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Invalid login credentials');
-      setLoading(false);
-    }
-  };
+    checkSession();
+  }, [navigate]);
 
   const handleSendOTP = async () => {
-    if (!email) {
-      setError('Email is required');
-      return;
-    }
-    
     setLoading(true);
     setError(null);
     
     try {
-      const isB3FEmail = email === 'b3fprintingsolutions@gmail.com';
-      
-      // Check if the email is in admin_users table
-      const { data: adminData, error: adminError } = await supabase
+      // First check if email exists in admin_users table
+      const { data: adminExists, error: checkError } = await supabase
         .from('admin_users')
-        .select('*')
+        .select('email')
         .eq('email', email)
         .maybeSingle();
+        
+      if (checkError) throw checkError;
       
-      if (adminError) {
-        throw new Error('Error verifying admin status');
+      if (!adminExists) {
+        throw new Error('Email not found in admin records');
       }
-      
-      // If B3F email but no admin record, create one
-      if (isB3FEmail && !adminData) {
-        const { error: createError } = await supabase
-          .from('admin_users')
-          .insert({
-            email: email,
-            role: 'super_admin',
-            permissions: ['products.all', 'orders.all', 'users.all']
-          } as AdminRecord);
-          
-        if (createError) {
-          console.error('Error creating admin account:', createError);
-        }
-      } else if (!adminData && !isB3FEmail) {
-        throw new Error('User is not authorized as admin');
-      }
-      
-      // Send OTP for verification
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+        
+      // Send magic link
+      const { error } = await supabase.auth.signInWithOtp({
         email,
+        options: { 
+          emailRedirectTo: `${window.location.origin}/admin/dashboard`
+        }
       });
       
-      if (otpError) {
-        throw otpError;
-      }
+      if (error) throw error;
       
-      // Log for development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Development mode: OTP sent to ${email}. Check your email or Supabase logs.`);
-      }
+      toast.success('Verification email sent!', {
+        description: `Please check ${email} for a verification link`
+      });
       
-      toast.success('Verification code sent to your email');
-      setIsOtpMode(true);
-    } catch (error: any) {
-      console.error('Error sending OTP:', error);
-      setError(error.message || 'Failed to send verification code');
+      setIsVerifying(true);
+    } catch (err: any) {
+      console.error('OTP error:', err);
+      setError(err.message || 'Failed to send verification email');
     } finally {
       setLoading(false);
     }
   };
   
-  const handleVerifyOtp = async (otp: string) => {
+  const handleVerifyOTP = async (otp: string) => {
     setLoading(true);
-    setError(null);
-    
     try {
-      const isB3FEmail = email === 'b3fprintingsolutions@gmail.com';
+      // In development mode, allow the default code "123456"
+      if (process.env.NODE_ENV === 'development' && otp === '123456') {
+        const { data: adminExists } = await supabase
+          .from('admin_users')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle();
+          
+        if (adminExists) {
+          // For the default code in dev, automatically sign in
+          // Using email link since we removed password auth
+          const { data, error } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              shouldCreateUser: false // Don't create a new user if it doesn't exist
+            }
+          });
+          
+          if (error) throw error;
+          
+          toast.success('Admin verification successful');
+          navigate('/admin/dashboard');
+          return;
+        }
+      }
       
-      // Verify OTP
-      const { data, error } = await supabase.auth.verifyOtp({
+      // For real OTP verification
+      const { error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'email'
+        type: 'magiclink'
       });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      if (!data.user) {
-        throw new Error('No user returned after verification');
-      }
-      
-      // Now check if this user is in admin_users table
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-      
-      if (adminError) {
-        throw new Error('Error verifying admin status');
-      }
-      
-      if (adminData) {
-        // Cast to proper type
-        const admin = adminData as AdminRecord;
-        
-        // If the user exists in auth but didn't exist in admin, update the record
-        if (data.user && isB3FEmail && !admin.user_id) {
-          await supabase
-            .from('admin_users')
-            .update({ 
-              user_id: data.user.id,
-              role: admin.role || 'super_admin',
-              permissions: admin.permissions || ['products.all', 'orders.all', 'users.all']
-            } as AdminRecord)
-            .eq('id', admin.id);
-        }
-        
-        // Successfully authenticated as admin
-        toast.success('Verification successful!');
-        
-        // Store admin role in localStorage
-        localStorage.setItem('adminRole', admin.role || 'admin');
-        localStorage.setItem('adminId', admin.user_id || (data.user?.id || admin.id));
-        localStorage.setItem('adminPermissions', JSON.stringify(admin.permissions || []));
-        
-        // Redirect to admin dashboard
-        navigate('/admin/dashboard');
-      } else {
-        // For the B3F email, always create an admin record if missing
-        if (isB3FEmail && data.user) {
-          const { data: insertData, error: insertError } = await supabase
-            .from('admin_users')
-            .insert({
-              email: email,
-              role: 'super_admin',
-              permissions: ['products.all', 'orders.all', 'users.all'],
-              user_id: data.user.id
-            } as AdminRecord)
-            .select()
-            .single();
-            
-          if (insertError) {
-            throw new Error('Error creating admin account: ' + insertError.message);
-          }
-          
-          if (insertData) {
-            toast.success('Admin account created and verification successful!');
-            
-            // Store admin role in localStorage
-            localStorage.setItem('adminRole', 'super_admin');
-            localStorage.setItem('adminId', data.user.id);
-            localStorage.setItem('adminPermissions', JSON.stringify(['products.all', 'orders.all', 'users.all']));
-            
-            // Redirect to admin dashboard
-            navigate('/admin/dashboard');
-            return;
-          }
-        } else {
-          // User authenticated but is not an admin
-          await supabase.auth.signOut();
-          throw new Error('User is not authorized as admin');
-        }
-      }
-    } catch (error: any) {
-      console.error('OTP verification error:', error);
-      setError(error.message || 'Invalid verification code');
+      toast.success('Login successful!');
+      navigate('/admin/dashboard');
+    } catch (err: any) {
+      console.error('Verification error:', err);
+      setError(err.message || 'Invalid verification code');
+      toast.error('Verification failed', { description: err.message });
     } finally {
       setLoading(false);
     }
   };
+  
+  const handleResendOTP = async () => {
+    return await handleSendOTP();
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isOtpMode ? (
-            <AdminOTPForm
-              email={email}
-              onVerify={handleVerifyOtp}
-              onResend={handleSendOTP}
-              onBack={() => setIsOtpMode(false)}
-            />
-          ) : (
-            <AdminLoginForm
-              email={email}
-              setEmail={setEmail}
-              password={password}
-              setPassword={setPassword}
-              error={error}
-              loading={loading}
-              usePasswordLogin={usePasswordLogin}
-              setUsePasswordLogin={setUsePasswordLogin}
-              handleLogin={handleLogin}
-              handleSendOTP={handleSendOTP}
-            />
-          )}
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md">
+        <Card className="shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardDescription>
+              {isVerifying ? 'Enter the verification code' : 'Sign in to your admin account'}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {isVerifying ? (
+              <AdminOTPForm 
+                email={email} 
+                onVerify={handleVerifyOTP}
+                onResend={handleResendOTP}
+                onBack={() => setIsVerifying(false)}
+              />
+            ) : (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">Email Address</label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
+                
+                {error && (
+                  <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-100 rounded-md">
+                    {error}
+                  </div>
+                )}
+                
+                <button 
+                  onClick={handleSendOTP}
+                  disabled={loading || !email}
+                  className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400"
+                >
+                  {loading ? "Sending..." : "Send Verification Code"}
+                </button>
+                
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
+                    <p className="font-medium">For development:</p>
+                    <p>Default admin: <code className="bg-white px-1 py-0.5 rounded">b3fprintingsolutions@gmail.com</code></p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

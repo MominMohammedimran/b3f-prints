@@ -1,29 +1,16 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+import { Toaster } from 'sonner';
 import AppRoutes from './routes';
-import { Toaster } from 'sonner'; 
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import {ActiveProductProvider } from './context/ActiveProductContext'
-import { LocationProvider } from './context/LocationContext';
-import { initializeAppSecurity } from './utils/initializeSecurity';
+import './App.css';
 
 function App() {
-  // Initialize security features
-  useEffect(() => {
-    initializeAppSecurity();
-  }, []);
-
   return (
-    <AuthProvider>
-      <LocationProvider>
-        <CartProvider>
-          <ActiveProductProvider>
-          <AppRoutes />
-          </ActiveProductProvider>
-        </CartProvider>
-      </LocationProvider>
-    </AuthProvider>
+    <HelmetProvider>
+      <AppRoutes />
+      <Toaster position="top-right" />
+    </HelmetProvider>
   );
 }
 

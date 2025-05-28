@@ -1,51 +1,40 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
-// These were missing in the original code
 export const DEFAULT_ADMIN_PERMISSIONS = [
-  "products.create",
-  "products.read",
-  "products.update",
-  "products.delete",
-  "orders.create",
-  "orders.read",
-  "orders.update",
-  "orders.delete",
-  "customers.create",
-  "customers.read",
-  "customers.update",
-  "customers.delete",
+  'products.create',
+  'products.read',
+  'products.update',
+  'products.delete',
+  'orders.create',
+  'orders.read',
+  'orders.update',
+  'orders.delete',
+  'customers.create',
+  'customers.read',
+  'customers.update',
+  'customers.delete',
 ];
 
-// Check if the current user is an authenticated admin
+// ✅ Check if the current user is an authenticated admin
 export const isAdminAuthenticated = async (): Promise<boolean> => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session || !session.user) {
-      return false;
-    }
-    
-    // Use direct query to avoid RLS infinite recursion
-    // Instead of selecting *, select only needed fields to prevent recursion
+    if (!session?.user?.email) return false;
+
     const { data: adminData, error } = await supabase
       .from('admin_users')
       .select('id, email')
       .eq('email', session.user.email)
       .maybeSingle();
-      
-    if (error || !adminData) {
-      return false;
-    }
-    
-    return true;
+
+    return !!adminData && !error;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
   }
 };
 
-// Sign out the admin user
+// ✅ Sign out the admin user
 export const signOutAdmin = async (): Promise<void> => {
   try {
     await supabase.auth.signOut();
@@ -58,73 +47,60 @@ export const signOutAdmin = async (): Promise<void> => {
   }
 };
 
-// Initialize admin with default permissions if they don't exist
+// ✅ Initialize admin with default permissions if they don't exist
 export const initializeAdmin = async (userId: string, email: string): Promise<void> => {
   try {
-    // Check if admin user already exists
     const { data: existingAdmin } = await supabase
       .from('admin_users')
-      .select('*')
+      .select('id')
       .eq('email', email)
       .maybeSingle();
-      
-    if (existingAdmin) {
-      return; // Admin already exists, nothing to do
-    }
-    
-    // Create new admin user with default permissions
-    await supabase
-      .from('admin_users')
-      .insert({
-        email,
-        user_id: userId,
-        role: 'admin',
-        permissions: DEFAULT_ADMIN_PERMISSIONS,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
+
+    if (existingAdmin) return;
+
+    await supabase.from('admin_users').insert({
+      email,
+      user_id: userId,
+      role: 'admin',
+      permissions: DEFAULT_ADMIN_PERMISSIONS,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('Error initializing admin:', error);
     throw error;
   }
 };
 
-// Ensure the main admin exists (for B3F email)
+// ✅ Ensure the main admin exists (fallback to alternative email too)
 export const ensureMainAdminExists = async (): Promise<void> => {
   const mainAdminEmail = 'b3fprintingsolutions@gmail.com';
-  const altAdminEmail = 'b3fprintingsolutions@gmai.com'; // Alternative email with typo
-  
+  const altAdminEmail = 'b3fprintingsolutions@gmai.com';
+
   try {
-    // Check if admin exists under either email
-    const { data: existingAdmin } = await supabase
+    const { data: existingAdmins, error } = await supabase
       .from('admin_users')
-      .select('*')
-      .or(`email.eq.${mainAdminEmail},email.eq.${altAdminEmail}`)
-      .maybeSingle();
-      
-    if (existingAdmin) {
-      return; // Admin already exists
-    }
-    
-    // Create the admin user
-    await supabase
-      .from('admin_users')
-      .insert({
-        email: mainAdminEmail,
-        role: 'super_admin',
-        permissions: ['products.all', 'orders.all', 'users.all'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
+      .select('id')
+      .in('email', [mainAdminEmail, altAdminEmail]);
+
+    if (error) throw error;
+    if (existingAdmins && existingAdmins.length > 0) return;
+
+    await supabase.from('admin_users').insert({
+      email: mainAdminEmail,
+      role: 'super_admin',
+      permissions: ['products.all', 'orders.all', 'users.all'],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
     console.log('Main admin created successfully');
   } catch (error) {
     console.error('Error ensuring main admin exists:', error);
   }
 };
 
-// Validate an admin session
+// ✅ Validate an admin session (wrapper)
 export const validateAdminSession = async (): Promise<boolean> => {
   return await isAdminAuthenticated();
 };
