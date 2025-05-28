@@ -19,56 +19,91 @@ const DesignPreviewCard: React.FC<DesignPreviewCardProps> = ({
 }) => {
   const downloadDesignAsPNG = async () => {
     try {
-      if (!designData) {
-        // If no design data, download preview image
-        if (previewImage) {
-          const link = document.createElement('a');
-          link.href = previewImage;
-          link.download = `${orderNumber}-${productName}-design.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+      if (!designData && !previewImage) {
+        console.error('No design data or preview image available');
         return;
       }
 
-      // Create a temporary canvas to render the design
-      const tempCanvas = new fabric.Canvas(null, {
-        width: designData.width || 500,
-        height: designData.height || 600,
-        backgroundColor: designData.backgroundColor || '#ffffff'
-      });
-
-      // Load the design data into the temporary canvas
-      tempCanvas.loadFromJSON(designData, () => {
-        // Generate PNG data URL
-        const dataURL = tempCanvas.toDataURL({
-          format: 'png',
-          quality: 1,
-          multiplier: 2 // Higher resolution
+      // If we have design data, recreate the canvas and export
+      if (designData) {
+        // Create a temporary canvas element
+        const tempCanvasElement = document.createElement('canvas');
+        tempCanvasElement.width = designData.width || 500;
+        tempCanvasElement.height = designData.height || 600;
+        
+        // Create fabric canvas
+        const tempCanvas = new fabric.Canvas(tempCanvasElement, {
+          width: designData.width || 500,
+          height: designData.height || 600,
+          backgroundColor: designData.backgroundColor || '#ffffff'
         });
 
-        // Create download link
-        const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = `${orderNumber}-${productName}-design.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Load the design data into the temporary canvas
+        tempCanvas.loadFromJSON(designData, () => {
+          // Filter out background objects for clean export
+          const designObjects = tempCanvas.getObjects().filter(obj => !obj.data?.isBackground);
+          
+          if (designObjects.length > 0) {
+            // Create a new canvas with only design elements
+            const exportCanvas = new fabric.Canvas(document.createElement('canvas'), {
+              width: tempCanvas.width,
+              height: tempCanvas.height,
+              backgroundColor: 'transparent'
+            });
 
-        // Clean up
-        tempCanvas.dispose();
-      });
+            // Add only design objects
+            designObjects.forEach(obj => {
+              exportCanvas.add(obj);
+            });
+
+            exportCanvas.renderAll();
+
+            // Generate PNG data URL
+            const dataURL = exportCanvas.toDataURL({
+              format: 'png',
+              quality: 1,
+              multiplier: 2
+            });
+
+            // Create download link
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = `${orderNumber}-${productName}-design.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up
+            exportCanvas.dispose();
+            tempCanvas.dispose();
+          } else {
+            // Fall back to preview image if no design objects
+            downloadPreviewImage();
+          }
+        });
+      } else {
+        // Fall back to preview image
+        downloadPreviewImage();
+      }
     } catch (error) {
       console.error('Error downloading design:', error);
-      // Fallback to preview image if available
-      if (previewImage) {
+      // Fallback to preview image download
+      downloadPreviewImage();
+    }
+  };
+
+  const downloadPreviewImage = () => {
+    if (previewImage) {
+      try {
         const link = document.createElement('a');
         link.href = previewImage;
-        link.download = `${orderNumber}-${productName}-design.png`;
+        link.download = `${orderNumber}-${productName}-preview.png`;
+        link.crossOrigin = 'anonymous';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error downloading preview image:', error);
       }
     }
   };
@@ -121,6 +156,9 @@ const DesignPreviewCard: React.FC<DesignPreviewCardProps> = ({
             src={previewImage}
             alt="Design Preview"
             className="w-full max-w-32 h-auto border rounded"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
         </div>
       )}
