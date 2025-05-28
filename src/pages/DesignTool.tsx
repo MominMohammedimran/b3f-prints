@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -202,13 +203,17 @@ const DesignTool = () => {
         });
         return;
       }
+
+      // Get canvas data for storage
+      const canvasJSON = canvas.toJSON();
+      const previewImage = canvas.toDataURL({ format: 'png', quality: 1 });
      
       if (isDualSided && activeProduct === 'tshirt') {
         // Save current side if needed
         if (productView === 'front') {
-          setFrontDesign(canvas.toDataURL({ format: 'png', quality: 1 }));
+          setFrontDesign(previewImage);
         } else if (productView === 'back') {
-          setBackDesign(canvas.toDataURL({ format: 'png', quality: 1 }));
+          setBackDesign(previewImage);
         }
        
         if (!frontDesign || !backDesign) {
@@ -227,7 +232,9 @@ const DesignTool = () => {
           size: selectedSize,
           metadata: {
             view: 'Dual-Sided',
-            backImage: backDesign
+            backImage: backDesign,
+            designData: canvasJSON,
+            previewImage: frontDesign
           }
         };
        
@@ -246,17 +253,17 @@ const DesignTool = () => {
         }
        
       } else {
-        const designDataUrl = canvas.toDataURL({ format: 'png', quality: 1 });
-       
         const customProduct = {
           product_id: `custom-${activeProduct}-${Date.now()}`,
           name: `Custom ${products[activeProduct]?.name || 'Product'}`,
           price: products[activeProduct]?.price || 200,
-          image: designDataUrl,
+          image: previewImage,
           quantity: 1,
           size: selectedSize,
           metadata: {
-            view: productView
+            view: productView,
+            designData: canvasJSON,
+            previewImage: previewImage
           }
         };
        

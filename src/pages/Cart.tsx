@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
@@ -90,13 +91,18 @@ const Cart = () => {
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       <img
-                        src={item.image || '/placeholder.svg'}
+                        src={item.metadata?.previewImage || item.image || '/placeholder.svg'}
                         alt={item.name}
                         className="h-20 w-20 object-cover rounded"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/placeholder.svg';
                         }}
                       />
+                      {item.metadata?.view && (
+                        <div className="text-xs text-center mt-1 text-gray-500">
+                          {item.metadata.view}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -105,6 +111,7 @@ const Cart = () => {
                         <p>Price: {formatPrice(item.price)}</p>
                         {item.size && <p>Size: {item.size}</p>}
                         {item.color && <p>Color: {item.color}</p>}
+                        {item.metadata?.view && <p>Design: {item.metadata.view}</p>}
                       </div>
                     </div>
 

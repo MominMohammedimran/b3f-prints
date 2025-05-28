@@ -13,6 +13,12 @@ export interface CartItem {
   size?: string;
   color?: string;
   image?: string;
+  metadata?: {
+    view?: string;
+    backImage?: string;
+    designData?: any;
+    previewImage?: string;
+  };
 }
 
 interface CartContextType {
@@ -101,6 +107,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           size: item.size,
           color: item.color,
           image: item.image,
+          metadata: item.metadata,
         }])
         .select()
         .single();
@@ -116,6 +123,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         size: data.size || undefined,
         color: data.color || undefined,
         image: data.image || undefined,
+        metadata: data.metadata || undefined,
       };
 
       setCartItems(prev => [...prev, newItem]);
