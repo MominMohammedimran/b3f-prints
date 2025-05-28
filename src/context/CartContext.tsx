@@ -56,7 +56,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      const transformedItems = data?.map(item => ({
+      const transformedItems = data?.map((item: any) => ({
         id: item.id,
         product_id: item.product_id,
         name: item.name,
@@ -124,7 +124,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         size: data.size || undefined,
         color: data.color || undefined,
         image: data.image || undefined,
-        metadata: data.metadata || undefined,
+        metadata: (data as any).metadata || undefined,
       };
 
       setCartItems(prev => [...prev, newItem]);
