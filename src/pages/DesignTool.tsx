@@ -170,6 +170,51 @@ const DesignTool = () => {
     return designComplete.front && designComplete.back;
   };
 
+  const generateDesignPreview = () => {
+    if (!canvas) return null;
+    
+    try {
+      // Get only design objects (exclude background)
+      const designObjects = canvas.getObjects().filter(obj => !obj.data?.isBackground);
+      
+      if (designObjects.length === 0) {
+        return null;
+      }
+
+      // Create a temporary canvas for preview generation
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width!;
+      tempCanvas.height = canvas.height!;
+      const tempFabricCanvas = new fabric.Canvas(tempCanvas, {
+        width: canvas.width!,
+        height: canvas.height!,
+        backgroundColor: 'transparent'
+      });
+
+      // Add only design objects to temp canvas
+      designObjects.forEach(obj => {
+        const clonedObj = fabric.util.object.clone(obj);
+        tempFabricCanvas.add(clonedObj);
+      });
+
+      tempFabricCanvas.renderAll();
+
+      // Generate data URL
+      const previewDataUrl = tempFabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1
+      });
+
+      // Clean up
+      tempFabricCanvas.dispose();
+
+      return previewDataUrl;
+    } catch (error) {
+      console.error('Error generating design preview:', error);
+      return canvas.toDataURL({ format: 'png', quality: 1 });
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!currentUser) {
       toast.error("Sign in required", {
@@ -202,13 +247,18 @@ const DesignTool = () => {
         });
         return;
       }
+
+      // Get canvas data for storage
+      const canvasJSON = canvas.toJSON();
+      const previewImage = generateDesignPreview();
      
       if (isDualSided && activeProduct === 'tshirt') {
         // Save current side if needed
+        let currentPreview = previewImage;
         if (productView === 'front') {
-          setFrontDesign(canvas.toDataURL({ format: 'png', quality: 1 }));
+          setFrontDesign(currentPreview!);
         } else if (productView === 'back') {
-          setBackDesign(canvas.toDataURL({ format: 'png', quality: 1 }));
+          setBackDesign(currentPreview!);
         }
        
         if (!frontDesign || !backDesign) {
@@ -227,11 +277,13 @@ const DesignTool = () => {
           size: selectedSize,
           metadata: {
             view: 'Dual-Sided',
-            backImage: backDesign
+            backImage: backDesign,
+            designData: canvasJSON,
+            previewImage: frontDesign
           }
         };
        
-        addToCart(customProduct);
+        await addToCart(customProduct);
        
         // Update inventory
         const success = await updateInventory(activeProduct, selectedSize, -1);
@@ -246,21 +298,21 @@ const DesignTool = () => {
         }
        
       } else {
-        const designDataUrl = canvas.toDataURL({ format: 'png', quality: 1 });
-       
         const customProduct = {
           product_id: `custom-${activeProduct}-${Date.now()}`,
           name: `Custom ${products[activeProduct]?.name || 'Product'}`,
           price: products[activeProduct]?.price || 200,
-          image: designDataUrl,
+          image: previewImage || '/placeholder.svg',
           quantity: 1,
           size: selectedSize,
           metadata: {
-            view: productView
+            view: productView,
+            designData: canvasJSON,
+            previewImage: previewImage
           }
         };
        
-        addToCart(customProduct);
+        await addToCart(customProduct);
        
         // Update inventory
         const success = await updateInventory(activeProduct, selectedSize, -1);
@@ -293,17 +345,14 @@ const DesignTool = () => {
     }
 
     try {
-      const designDataUrl = canvas.toDataURL({
-        format: 'png',
-        quality: 1
-      });
+      const designDataUrl = generateDesignPreview();
      
-      // Save to browser storage for now (could be replaced with actual database storage later)
-      localStorage.setItem(`design-${Date.now()}`, designDataUrl);
-     
-      toast.success("Design saved", {
-        description: "Your design has been saved successfully"
-      });
+      if (designDataUrl) {
+        localStorage.setItem(`design-${Date.now()}`, designDataUrl);
+        toast.success("Design saved", {
+          description: "Your design has been saved successfully"
+        });
+      }
     } catch (error) {
       console.error('Error saving design:', error);
       toast.error("Save failed", {
