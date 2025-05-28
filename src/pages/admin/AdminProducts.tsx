@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import ProductEditForm from '@/components/admin/ProductEditForm';
 import { Product } from '@/lib/types';
-
+import AdminLayout from '../../components/admin/AdminLayout';
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,16 +183,18 @@ const AdminProducts = () => {
 
   if (loading && products.length === 0) {
     return (
+    <AdminLayout title="Admin Products">
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading products...</span>
         </div>
       </div>
+      </AdminLayout>
     );
   }
 
-  return (
+  return (<AdminLayout title="Admin Products">
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products Management</h1>
@@ -316,6 +318,7 @@ const AdminProducts = () => {
         )}
       </div>
     </div>
+    </AdminLayout>
   );
 };
 

@@ -1,3 +1,4 @@
+// components/AdminHeader.tsx
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -9,9 +10,11 @@ import { signOutAdmin } from '@/utils/adminAuth';
 interface AdminHeaderProps {
   title?: string;
   onMenuClick?: () => void;
+  orderCount?: number;
+  showMenuButton?: boolean;
 }
 
-const AdminHeader = ({ title, onMenuClick }: AdminHeaderProps) => {
+const AdminHeader = ({ title, onMenuClick,showMenuButton = true, orderCount }: AdminHeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -28,20 +31,14 @@ const AdminHeader = ({ title, onMenuClick }: AdminHeaderProps) => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-4 lg:px-6 py-4">
-        {/* Left side */}
         <div className="flex items-center space-x-4">
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-          
-          {/* Title */}
-          <div>
+          {/* Conditionally render the menu icon */}
+          {showMenuButton && (
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+              <Menu className="h-6 w-6" />
+            </Button>
+          )}
+          <div className="flex-1 text-center">
             <h1 className="text-xl lg:text-2xl font-semibold text-gray-900">
               {title || 'Dashboard'}
             </h1>
@@ -51,39 +48,21 @@ const AdminHeader = ({ title, onMenuClick }: AdminHeaderProps) => {
           </div>
         </div>
 
-        {/* Right side */}
         <div className="flex items-center space-x-2 lg:space-x-4">
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
+          <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/admin/orders')}>
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
+              {orderCount}
             </span>
           </Button>
-
-          {/* Profile */}
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/website-users')}>
             <User className="h-5 w-5" />
           </Button>
-
-          {/* Logout */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="hidden sm:flex items-center space-x-2"
-          >
+          <Button variant="outline" size="sm" onClick={handleLogout} className="hidden sm:flex items-center space-x-2">
             <LogOut className="h-4 w-4" />
             <span>Logout</span>
           </Button>
-          
-          {/* Mobile logout */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="sm:hidden"
-          >
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="sm:hidden">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
@@ -91,5 +70,6 @@ const AdminHeader = ({ title, onMenuClick }: AdminHeaderProps) => {
     </header>
   );
 };
+
 
 export default AdminHeader;

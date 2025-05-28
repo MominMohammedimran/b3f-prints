@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
+import AdminLayout from '../../components/admin/AdminLayout';
 interface UserProfile {
   id: string;
   email: string;
@@ -120,27 +120,32 @@ const AdminWebsiteUsers = () => {
 
   if (isLoading) {
     return (
+    <AdminLayout title="Admin Website Users">
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading users...</span>
         </div>
       </div>
+      </AdminLayout>
     );
   }
 
   if (error) {
     return (
+      <AdminLayout title="Admin Website Users">
       <div className="p-6">
         <div className="text-center py-8">
           <p className="text-red-500 mb-4">Error loading users.</p>
           <Button onClick={() => refetch()}>Retry</Button>
         </div>
       </div>
+      </AdminLayout>
     );
   }
 
   return (
+    <AdminLayout title="Admin Website Users">
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Website Users</h1>
@@ -312,6 +317,7 @@ const AdminWebsiteUsers = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminLayout>
   );
 };
 

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from 'zod';
+import {supabase} from '@/integrations/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useSupabaseClient } from '@/hooks/useSupabase';
@@ -38,7 +39,16 @@ export interface SignupFormProps {
   handleSubmit?: (e: React.FormEvent) => Promise<void>;
   loading?: boolean;
   setMode?: Dispatch<SetStateAction<'signin' | 'signup' | 'otp'>>;
-}
+}const handleGoogleSignIn = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  });
+
+  if (error) {
+    toast.error('Google sign-in failed');
+    console.error('Google sign-in error:', error.message);
+  }
+};
 
 const SignupForm: React.FC<SignupFormProps> = ({ 
   onVerificationSent,
@@ -58,6 +68,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const [localShowPassword, setLocalShowPassword] = useState(false);
   const [localShowConfirmPassword, setLocalShowConfirmPassword] = useState(false);
   const supabase = useSupabaseClient();
+
 
   // Determine which mode we're in based on props
   const isStandalone = !!onVerificationSent;
@@ -252,6 +263,22 @@ const SignupForm: React.FC<SignupFormProps> = ({
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Creating Account...' : 'Create Account'}
         </Button>
+             <div className="relative my-4 text-center">
+            <div className="absolute inset-0 flex items-center">
+               <div className="w-full border-t border-gray-300" />
+                 </div>
+                <div className="relative z-10 bg-white px-2 text-sm text-gray-500">
+              or
+             </div>
+       </div>
+                 <button onClick={handleGoogleSignIn}>
+                   <img
+                    src="https://cmpggiyuiattqjmddcac.supabase.co/storage/v1/object/public/product-images/google-logo-image/signup.png"
+                    alt="Sign in with Google"
+                   className="w-48 sm:w-50 md:w-48 lg:w-58 h-auto" // adjust size as needed
+                    />
+                 </button>
+
         <p className="text-center text-sm">
           Already have an account?{" "}
           <button
@@ -391,6 +418,23 @@ const SignupForm: React.FC<SignupFormProps> = ({
         >
           {isSubmitting ? 'Creating Account...' : 'Sign Up'}
         </Button>
+ <div className="relative my-4 text-center">
+  <div className="absolute inset-0 flex items-center">
+    <div className="w-full border-t border-gray-300" />
+  </div>
+  <div className="relative z-10 bg-white px-2 text-sm text-gray-500">
+    or
+  </div>
+</div>
+
+
+      <button onClick={handleGoogleSignIn}>
+  <img
+    src="https://cmpggiyuiattqjmddcac.supabase.co/storage/v1/object/public/product-images/google-logo-image/signin.png"
+    alt="Sign in with Google"
+    className="w-40 h-auto" // adjust size as needed
+  />
+</button>
 
         <div className="text-center mt-6">
           <p className="text-gray-600">

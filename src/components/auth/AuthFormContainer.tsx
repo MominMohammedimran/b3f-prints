@@ -38,6 +38,16 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+const handleGoogleSignIn = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  });
+
+  if (error) {
+    toast.error('Google sign-in failed');
+    console.error('Google sign-in error:', error.message);
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,16 +262,7 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
           />
         )}
       </CardContent>
-      {process.env.NODE_ENV === 'development' && (
-        <CardFooter>
-          <div className="w-full p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
-            <p className="font-medium">For development testing:</p>
-            <p>Email: <code className="bg-white px-1">test@example.com</code></p>
-            <p>Password: <code className="bg-white px-1">Password123!</code></p>
-            <p>OTP code: <code className="bg-white px-1">123456</code></p>
-          </div>
-        </CardFooter>
-      )}
+     
     </Card>
   );
 };

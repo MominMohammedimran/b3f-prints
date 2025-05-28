@@ -20,14 +20,8 @@ const Footer = () => {
                className="max-w-md rounded overflow-hidden shadow-md cursor-pointer"
                onClick={() => window.open('https://maps.app.goo.gl/sKTqynHNJmw2bpCL9', '_blank')}
            >
-              <iframe
-                src="https://maps.google.com/maps?q=B3F - prints & men's wear Gooty&output=embed"
-                width="100%"
-                height="200"
-                style={{ border: 0, pointerEvents: 'none' }}
-                loading="lazy"
-                title="Map Preview"
-               ></iframe>
+             
+               
              </div>
           </div>
 
