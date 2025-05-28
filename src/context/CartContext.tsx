@@ -65,6 +65,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         size: item.size || undefined,
         color: item.color || undefined,
         image: item.image || undefined,
+        metadata: item.metadata || undefined,
       })) || [];
 
       setCartItems(transformedItems);
